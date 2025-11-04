@@ -168,14 +168,24 @@ export default function Home() {
                 className={`mt-6 p-6 rounded-2xl border-2 ${
                   results.verified
                     ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-500'
+                    : results.status === 'fake'
+                    ? 'bg-gradient-to-r from-red-500/20 to-red-600/20 border-red-500'
                     : 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500'
                 }`}
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <span className="text-4xl">{results.verified ? '✅' : '⚠️'}</span>
+                    <span className="text-4xl">
+                      {results.verified ? '✅' : results.status === 'fake' ? '❌' : '⚠️'}
+                    </span>
                     <div>
-                      <div className={`font-bold text-lg ${results.verified ? 'text-green-400' : 'text-yellow-400'}`}>
+                      <div className={`font-bold text-lg ${
+                        results.verified 
+                          ? 'text-green-400' 
+                          : results.status === 'fake' 
+                          ? 'text-red-400' 
+                          : 'text-yellow-400'
+                      }`}>
                         {results.message}
                       </div>
                       {results.details?.error && (
@@ -184,7 +194,13 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className={`text-4xl font-black ${results.verified ? 'text-green-400' : 'text-yellow-400'}`}>
+                    <div className={`text-4xl font-black ${
+                      results.verified 
+                        ? 'text-green-400' 
+                        : results.status === 'fake' 
+                        ? 'text-red-400' 
+                        : 'text-yellow-400'
+                    }`}>
                       {results.score}%
                     </div>
                     <div className="text-xs text-gray-400">Health Score</div>

@@ -15,14 +15,33 @@ export default function Home() {
     }
 
     setIsChecking(true);
-    setTimeout(() => {
-      setResults({
-        status: 'verified',
-        message: 'Citation verified successfully!',
-        score: 95
+    
+    try {
+      const response = await fetch('/api/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ citation })
       });
+
+      const data = await response.json();
+      
+      setResults({
+        status: data.status,
+        message: data.message,
+        score: data.score,
+        details: data.details,
+        verified: data.verified
+      });
+    } catch (error) {
+      setResults({
+        status: 'error',
+        message: '❌ Error verifying citation. Please try again.',
+        score: 0,
+        details: { error: error.message }
+      });
+    } finally {
       setIsChecking(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -146,21 +165,67 @@ export default function Home() {
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="mt-6 p-6 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-2 border-green-500 rounded-2xl"
+                className={`mt-6 p-6 rounded-2xl border-2 ${
+                  results.verified
+                    ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-500'
+                    : 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500'
+                }`}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <span className="text-4xl">✅</span>
+                    <span className="text-4xl">{results.verified ? '✅' : '⚠️'}</span>
                     <div>
-                      <div className="font-bold text-green-400 text-lg">Citation Verified!</div>
-                      <div className="text-sm text-gray-300">{results.message}</div>
+                      <div className={`font-bold text-lg ${results.verified ? 'text-green-400' : 'text-yellow-400'}`}>
+                        {results.message}
+                      </div>
+                      {results.details?.error && (
+                        <div className="text-sm text-gray-300">{results.details.error}</div>
+                      )}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-4xl font-black text-green-400">{results.score}%</div>
+                    <div className={`text-4xl font-black ${results.verified ? 'text-green-400' : 'text-yellow-400'}`}>
+                      {results.score}%
+                    </div>
                     <div className="text-xs text-gray-400">Health Score</div>
                   </div>
                 </div>
+
+                {/* Show Details if Available */}
+                {results.details && Object.keys(results.details).length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-white/20 space-y-2 text-sm">
+                    {results.details.title && (
+                      <div>
+                        <span className="text-gray-400">Title:</span>
+                        <span className="text-white ml-2">{results.details.title.substring(0, 80)}</span>
+                      </div>
+                    )}
+                    {results.details.authors && (
+                      <div>
+                        <span className="text-gray-400">Authors:</span>
+                        <span className="text-white ml-2">{results.details.authors.substring(0, 60)}</span>
+                      </div>
+                    )}
+                    {results.details.year && (
+                      <div>
+                        <span className="text-gray-400">Year:</span>
+                        <span className="text-white ml-2">{results.details.year}</span>
+                      </div>
+                    )}
+                    {results.details.journal && (
+                      <div>
+                        <span className="text-gray-400">Journal:</span>
+                        <span className="text-white ml-2">{results.details.journal}</span>
+                      </div>
+                    )}
+                    {results.details.doi && (
+                      <div>
+                        <span className="text-gray-400">DOI:</span>
+                        <span className="text-white ml-2">{results.details.doi}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </motion.div>
             )}
 

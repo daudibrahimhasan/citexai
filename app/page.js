@@ -2,12 +2,20 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { formatCitation } from './utils/formatConverter';
 
 export default function Home() {
   const [citation, setCitation] = useState('');
   const [results, setResults] = useState(null);
   const [isChecking, setIsChecking] = useState(false);
+  
+  // PDF Upload states
+  const [pdfFile, setPdfFile] = useState(null);
+  const [pdfCitations, setPdfCitations] = useState([]);
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+  const [selectedFormat, setSelectedFormat] = useState('APA');
 
+  // Check Citation
   const checkCitation = async () => {
     if (!citation.trim()) {
       alert('Please enter a citation!');
@@ -42,6 +50,47 @@ export default function Home() {
     } finally {
       setIsChecking(false);
     }
+  };
+
+  // PDF Upload Handler
+  const handlePdfUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setPdfFile(file);
+    setIsUploadingPdf(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/upload-pdf', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setPdfCitations(data.citations);
+        alert(`✅ Found ${data.citationsFound} citations in PDF!`);
+      } else {
+        alert('❌ ' + data.error);
+      }
+    } catch (error) {
+      alert('❌ Error uploading PDF: ' + error.message);
+    } finally {
+      setIsUploadingPdf(false);
+    }
+  };
+
+  // Copy formatted citation
+  const copyFormattedCitation = (format) => {
+    if (!results || !results.details) return;
+    
+    const formatted = formatCitation(results.details, format);
+    navigator.clipboard.writeText(formatted);
+    alert(`✅ ${format} citation copied to clipboard!`);
   };
 
   return (
@@ -88,8 +137,8 @@ export default function Home() {
             className="inline-flex items-center space-x-2 bg-red-500/20 border border-red-500 px-6 py-3 rounded-full mb-8 backdrop-blur-sm"
           >
             <span className="text-red-400 text-sm font-bold">🚨 LIVE</span>
-            <span className="text-white font-mono text-sm">847,293 Citations Checked Today</span>
-            <span className="text-red-400 text-sm">• 3,921 Fakes Caught 💀</span>
+            <span className="text-white font-mono text-sm">7,293 Citations Checked Today</span>
+            <span className="text-red-400 text-sm">• 3921 Fakes Caught 💀</span>
           </motion.div>
 
           {/* Main Headline */}
@@ -142,12 +191,63 @@ export default function Home() {
               <textarea
                 value={citation}
                 onChange={(e) => setCitation(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && checkCitation()}
                 placeholder="Smith, J. (2023). The Future of AI. Journal of Technology, 15(3), 245-267. https://doi.org/10.1234/example"
                 className="w-full h-40 p-5 bg-black/50 border-2 border-white/20 rounded-2xl focus:border-cyan-500 focus:outline-none resize-none text-white placeholder-gray-500 backdrop-blur-sm"
               />
             </div>
 
-            <div className="flex gap-4">
+            {/* PDF Upload Section */}
+            <div className="mt-6 p-6 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-2xl border-2 border-purple-500/30">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-white">📄 PDF Citation Extractor</h3>
+                  <p className="text-sm text-gray-400">Upload research paper to extract all citations</p>
+                </div>
+                <span className="bg-gradient-to-r from-yellow-400 to-orange-500 px-3 py-1 rounded-full text-xs font-black">
+                  PREMIUM 💎
+                </span>
+              </div>
+              
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={handlePdfUpload}
+                className="hidden"
+                id="pdf-upload"
+                disabled={isUploadingPdf}
+              />
+              
+              <label
+                htmlFor="pdf-upload"
+                className={`block w-full p-4 border-2 border-dashed border-purple-500/50 rounded-xl text-center cursor-pointer hover:border-purple-500 hover:bg-purple-500/5 transition-all ${
+                  isUploadingPdf ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                {isUploadingPdf ? (
+                  <span>🔄 Processing PDF...</span>
+                ) : pdfFile ? (
+                  <span>✅ {pdfFile.name} - Click to change</span>
+                ) : (
+                  <span>📄 Click to upload PDF (max 10MB)</span>
+                )}
+              </label>
+
+              {pdfCitations.length > 0 && (
+                <div className="mt-4 p-4 bg-black/30 rounded-xl max-h-60 overflow-y-auto">
+                  <p className="text-sm font-bold text-purple-400 mb-2">
+                    Found {pdfCitations.length} citations:
+                  </p>
+                  {pdfCitations.map((cit, i) => (
+                    <div key={i} className="text-xs text-gray-300 mb-2 p-2 bg-white/5 rounded">
+                      {cit.substring(0, 100)}...
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-4 mt-6">
               <button
                 onClick={checkCitation}
                 disabled={isChecking}
@@ -155,10 +255,33 @@ export default function Home() {
               >
                 {isChecking ? '🔍 Verifying...' : '✅ Check Citation Now'}
               </button>
-              <button className="px-8 py-4 border-2 border-dashed border-white/30 rounded-2xl hover:border-cyan-500 hover:bg-white/5 transition-all duration-300 font-semibold">
-                📄 Upload PDF
-              </button>
             </div>
+
+            {/* Format Converter - Show after verification */}
+            {results && results.verified && (
+              <div className="mt-6 p-6 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-2xl border-2 border-cyan-500/30">
+                <h3 className="text-lg font-bold text-white mb-4">📋 Format Converter</h3>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {['APA', 'MLA', 'CHICAGO', 'HARVARD'].map(format => (
+                    <button
+                      key={format}
+                      onClick={() => { setSelectedFormat(format); copyFormattedCitation(format); }}
+                      className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/50 px-4 py-3 rounded-xl hover:from-cyan-500/30 hover:to-blue-500/30 transition-all font-semibold"
+                    >
+                      Copy {format}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-4 p-4 bg-black/30 rounded-xl">
+                  <p className="text-xs text-gray-400 mb-2">Preview ({selectedFormat}):</p>
+                  <p className="text-sm text-white">
+                    {formatCitation(results.details, selectedFormat)}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Results */}
             {results && (
@@ -168,23 +291,28 @@ export default function Home() {
                 className={`mt-6 p-6 rounded-2xl border-2 ${
                   results.verified
                     ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-500'
-                    : results.status === 'fake'
+                    : results.score < 20
                     ? 'bg-gradient-to-r from-red-500/20 to-red-600/20 border-red-500'
-                    : 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500'
+                    : results.score < 70
+                    ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500'
+                    : ''
                 }`}
+
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <span className="text-4xl">
-                      {results.verified ? '✅' : results.status === 'fake' ? '❌' : '⚠️'}
+                      {results.verified ? '✅' : results.score < 20 ? '❌' : results.score < 70 ? '⚠️' : '✅'}
                     </span>
                     <div>
                       <div className={`font-bold text-lg ${
                         results.verified 
                           ? 'text-green-400' 
-                          : results.status === 'fake' 
-                          ? 'text-red-400' 
-                          : 'text-yellow-400'
+                          : results.score < 20
+                          ? 'text-red-400'
+                          : results.score < 70
+                          ? 'text-yellow-400'
+                          : 'text-green-400'
                       }`}>
                         {results.message}
                       </div>
@@ -199,7 +327,7 @@ export default function Home() {
                         ? 'text-green-400' 
                         : results.status === 'fake' 
                         ? 'text-red-400' 
-                        : 'text-yellow-400'
+                        : 'text-white-400'
                     }`}>
                       {results.score}%
                     </div>
@@ -244,9 +372,7 @@ export default function Home() {
                 )}
               </motion.div>
             )}
-
           </motion.div>
-
         </div>
       </section>
 
@@ -327,7 +453,6 @@ export default function Home() {
                 <p className="text-gray-400 leading-relaxed">{feature.desc}</p>
               </motion.div>
             ))}
-
           </div>
         </div>
       </section>
@@ -397,7 +522,6 @@ export default function Home() {
           <p className="text-gray-600 text-sm">© 2025 CiteXai. All rights reserved.</p>
         </div>
       </footer>
-
     </div>
   );
 }

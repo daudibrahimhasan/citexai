@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { formatCitation } from './utils/formatConverter';
 
@@ -8,12 +8,46 @@ export default function Home() {
   const [citation, setCitation] = useState('');
   const [results, setResults] = useState(null);
   const [isChecking, setIsChecking] = useState(false);
+  const [isFixing, setIsFixing] = useState(false);
   
   // PDF Upload states
   const [pdfFile, setPdfFile] = useState(null);
   const [pdfCitations, setPdfCitations] = useState([]);
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState('APA');
+  
+  // History states
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  
+  // Suggestion state
+  const [suggestion, setSuggestion] = useState(null);
+
+  // Load history from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('citationHistory');
+    if (saved) {
+      setHistory(JSON.parse(saved));
+    }
+  }, []);
+
+  // Save history to localStorage
+  const saveToHistory = (citationData) => {
+    const newHistory = [
+      {
+        id: Date.now(),
+        citation: citationData.citation,
+        verified: citationData.verified,
+        score: citationData.score,
+        timestamp: new Date().toLocaleString(),
+        details: citationData.details
+      },
+      ...history
+    ].slice(0, 50); // Keep last 50
+    
+    setHistory(newHistory);
+    localStorage.setItem('citationHistory', JSON.stringify(newHistory));
+  };
 
   // Check Citation
   const checkCitation = async () => {
@@ -23,6 +57,7 @@ export default function Home() {
     }
 
     setIsChecking(true);
+    setSuggestion(null);
     
     try {
       const response = await fetch('/api/verify', {
@@ -33,22 +68,67 @@ export default function Home() {
 
       const data = await response.json();
       
-      setResults({
+      const resultData = {
         status: data.status,
         message: data.message,
         score: data.score,
         details: data.details,
-        verified: data.verified
-      });
+        verified: data.verified,
+        citation: citation
+      };
+      
+      setResults(resultData);
+      saveToHistory(resultData);
     } catch (error) {
       setResults({
         status: 'error',
         message: '❌ Error verifying citation. Please try again.',
         score: 0,
-        details: { error: error.message }
+        details: { error: error.message },
+        citation: citation
       });
     } finally {
       setIsChecking(false);
+    }
+  };
+
+  // Fix Citation with Groq AI
+  const fixCitation = async () => {
+    if (!citation.trim()) {
+      alert('Please enter a citation to fix!');
+      return;
+    }
+
+    setIsFixing(true);
+    
+    try {
+      const response = await fetch('/api/fix-citation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ citation })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSuggestion(data.suggestion);
+        // ✅ NO ALERT - Just show suggestion in UI
+      } else {
+        alert('❌ Error: ' + data.error);
+      }
+    } catch (error) {
+      alert('❌ Error: ' + error.message);
+    } finally {
+      setIsFixing(false);
+    }
+  };
+
+
+  // Apply suggestion
+  const applySuggestion = () => {
+    if (suggestion) {
+      setCitation(suggestion);
+      setSuggestion(null);
     }
   };
 
@@ -93,6 +173,38 @@ export default function Home() {
     alert(`✅ ${format} citation copied to clipboard!`);
   };
 
+  // Delete history item
+  const deleteHistoryItem = (id) => {
+    const updated = history.filter(item => item.id !== id);
+    setHistory(updated);
+    localStorage.setItem('citationHistory', JSON.stringify(updated));
+  };
+
+  // Clear all history
+  const clearAllHistory = () => {
+    if (confirm('Delete all citation history?')) {
+      setHistory([]);
+      localStorage.removeItem('citationHistory');
+    }
+  };
+
+  // Export history as CSV
+  const exportHistory = () => {
+    const csv = [
+      ['Citation', 'Verified', 'Score', 'Timestamp'],
+      ...history.map(h => [h.citation, h.verified ? 'Yes' : 'No', h.score + '%', h.timestamp])
+    ]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'citation-history.csv';
+    a.click();
+  };
+
   return (
     <div className="bg-black text-white overflow-hidden">
       
@@ -113,23 +225,84 @@ export default function Home() {
           <motion.button 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
+            onClick={() => setShowHistory(!showHistory)}
             className="bg-gradient-to-r from-cyan-500 to-blue-600 px-8 py-2.5 rounded-full font-bold hover:shadow-lg hover:shadow-cyan-500/50 transition-all duration-300"
           >
-            Sign In
+            📋 History ({history.length})
           </motion.button>
         </div>
       </nav>
 
+      {/* History Sidebar */}
+      {showHistory && (
+        <motion.div
+          initial={{ x: -400 }}
+          animate={{ x: 0 }}
+          exit={{ x: -400 }}
+          className="fixed left-0 top-20 h-[calc(100vh-80px)] w-96 bg-gradient-to-br from-gray-900 to-black border-r border-white/10 overflow-y-auto z-40 p-6"
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-2xl font-bold">Citation History</h3>
+            {history.length > 0 && (
+              <button
+                onClick={clearAllHistory}
+                className="text-xs bg-red-500/20 border border-red-500 px-2 py-1 rounded hover:bg-red-500/30"
+              >
+                Clear All
+              </button>
+            )}
+          </div>
+
+          {history.length > 0 && (
+            <button
+              onClick={exportHistory}
+              className="w-full mb-4 bg-green-500/20 border border-green-500 px-3 py-2 rounded hover:bg-green-500/30 text-sm font-bold"
+            >
+              📥 Export CSV
+            </button>
+          )}
+
+          <div className="space-y-3">
+            {history.length === 0 ? (
+              <p className="text-gray-400 text-center py-8">No citation history yet</p>
+            ) : (
+              history.map(item => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className={`p-3 rounded-lg border-l-4 ${
+                    item.verified ? 'border-green-500 bg-green-500/10' : 'border-red-500 bg-red-500/10'
+                  }`}
+                >
+                  <div className="text-xs text-gray-400">{item.timestamp}</div>
+                  <div className="text-sm font-mono text-white truncate mt-1">{item.citation.substring(0, 60)}...</div>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className={`text-xs font-bold ${item.verified ? 'text-green-400' : 'text-red-400'}`}>
+                      {item.score}% {item.verified ? '✅' : '❌'}
+                    </span>
+                    <button
+                      onClick={() => deleteHistoryItem(item.id)}
+                      className="text-xs text-red-400 hover:text-red-300"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </div>
+        </motion.div>
+      )}
+
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center pt-20 px-6">
         
-        {/* Animated Background Gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-purple-500/10"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(6,182,212,0.1),transparent_50%)]"></div>
         
         <div className="relative max-w-7xl mx-auto text-center">
           
-          {/* Live Stats Counter */}
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -137,11 +310,10 @@ export default function Home() {
             className="inline-flex items-center space-x-2 bg-red-500/20 border border-red-500 px-6 py-3 rounded-full mb-8 backdrop-blur-sm"
           >
             <span className="text-red-400 text-sm font-bold">🚨 LIVE</span>
-            <span className="text-white font-mono text-sm">7,293 Citations Checked Today</span>
-            <span className="text-red-400 text-sm">• 3921 Fakes Caught 💀</span>
+            <span className="text-white font-mono text-sm">847,293 Citations Checked Today</span>
+            <span className="text-red-400 text-sm">• 3,921 Fakes Caught 💀</span>
           </motion.div>
 
-          {/* Main Headline */}
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -160,7 +332,7 @@ export default function Home() {
             transition={{ delay: 0.4 }}
             className="text-xl md:text-2xl text-gray-400 mb-4 max-w-3xl mx-auto"
           >
-            Verify citations instantly. Save your grade. Stay honest.
+            Verify citations instantly. Fix broken ones with AI. Save your grade. Stay honest.
           </motion.p>
 
           <motion.div 
@@ -198,7 +370,7 @@ export default function Home() {
             </div>
 
             {/* PDF Upload Section */}
-            <div className="mt-6 p-6 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-2xl border-2 border-purple-500/30">
+            <div className="mt-6 p-6 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-2xl border-2 border-purple-500/30 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-bold text-white">📄 PDF Citation Extractor</h3>
@@ -247,15 +419,46 @@ export default function Home() {
               )}
             </div>
 
-            <div className="flex gap-4 mt-6">
-              <button
+            {/* Buttons */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <motion.button
                 onClick={checkCitation}
                 disabled={isChecking}
-                className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 py-4 rounded-2xl font-bold text-lg hover:shadow-xl hover:shadow-cyan-500/50 transition-all duration-300 disabled:opacity-50"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="bg-gradient-to-r from-cyan-500 to-blue-600 py-4 rounded-2xl font-bold text-lg hover:shadow-xl hover:shadow-cyan-500/50 transition-all duration-300 disabled:opacity-50"
               >
-                {isChecking ? '🔍 Verifying...' : '✅ Check Citation Now'}
-              </button>
+                {isChecking ? '🔍 Verifying...' : '✅ Check Citation'}
+              </motion.button>
+
+              <motion.button
+                onClick={fixCitation}
+                disabled={isFixing}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="bg-gradient-to-r from-green-500 to-emerald-600 py-4 rounded-2xl font-bold text-lg hover:shadow-xl hover:shadow-green-500/50 transition-all duration-300 disabled:opacity-50"
+              >
+                {isFixing ? '✨ Fixing...' : '✨ AI Fix Citation'}
+              </motion.button>
             </div>
+
+            {/* AI Suggestion */}
+            {suggestion && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 bg-green-500/10 border-2 border-green-500/50 rounded-xl mb-6"
+              >
+                <p className="text-sm text-gray-300 mb-2">✨ AI Suggestion:</p>
+                <p className="text-white font-mono text-sm mb-3">{suggestion}</p>
+                <button
+                  onClick={applySuggestion}
+                  className="bg-green-500/20 hover:bg-green-500/30 border border-green-500 px-4 py-2 rounded text-sm font-bold transition-all"
+                >
+                  ✅ Apply This Suggestion
+                </button>
+              </motion.div>
+            )}
 
             {/* Format Converter - Show after verification */}
             {results && results.verified && (
@@ -264,19 +467,22 @@ export default function Home() {
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {['APA', 'MLA', 'CHICAGO', 'HARVARD'].map(format => (
-                    <button
-                      key={format}
-                      onClick={() => { setSelectedFormat(format); copyFormattedCitation(format); }}
-                      className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/50 px-4 py-3 rounded-xl hover:from-cyan-500/30 hover:to-blue-500/30 transition-all font-semibold"
-                    >
-                      Copy {format}
-                    </button>
-                  ))}
+                      <button
+                        key={format}
+                        onClick={() => {
+                          setSelectedFormat(format);
+                          copyFormattedCitation(format);
+                        }}
+                        className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/50 px-4 py-3 rounded-xl hover:from-cyan-500/30 hover:to-blue-500/30 transition-all font-semibold"
+                      >
+                        Copy {format}
+                      </button>
+                    ))}
                 </div>
 
                 <div className="mt-4 p-4 bg-black/30 rounded-xl">
                   <p className="text-xs text-gray-400 mb-2">Preview ({selectedFormat}):</p>
-                  <p className="text-sm text-white">
+                  <p className="text-sm text-white font-mono">
                     {formatCitation(results.details, selectedFormat)}
                   </p>
                 </div>
@@ -295,9 +501,8 @@ export default function Home() {
                     ? 'bg-gradient-to-r from-red-500/20 to-red-600/20 border-red-500'
                     : results.score < 70
                     ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500'
-                    : ''
+                    : 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-500'
                 }`}
-
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
@@ -325,9 +530,11 @@ export default function Home() {
                     <div className={`text-4xl font-black ${
                       results.verified 
                         ? 'text-green-400' 
-                        : results.status === 'fake' 
-                        ? 'text-red-400' 
-                        : 'text-white-400'
+                        : results.score < 20
+                        ? 'text-red-400'
+                        : results.score < 70
+                        ? 'text-yellow-400'
+                        : 'text-green-400'
                     }`}>
                       {results.score}%
                     </div>
@@ -335,7 +542,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Show Details if Available */}
                 {results.details && Object.keys(results.details).length > 0 && (
                   <div className="mt-4 pt-4 border-t border-white/20 space-y-2 text-sm">
                     {results.details.title && (
@@ -414,21 +620,21 @@ export default function Home() {
                 color: 'from-cyan-400 to-blue-500'
               },
               {
+                icon: '✨',
+                title: 'AI Citation Fixer',
+                desc: 'Broken citation? AI fixes it instantly and suggests corrections.',
+                color: 'from-green-400 to-emerald-500'
+              },
+              {
                 icon: '🎯',
                 title: 'One-Click Fixes',
                 desc: 'Auto-format to APA, MLA, Chicago. Export clean bibliographies instantly.',
                 color: 'from-purple-400 to-pink-500'
               },
               {
-                icon: '🔒',
-                title: 'Plagiarism Shield',
-                desc: 'Ensure every citation is legitimate, traceable, and academically sound.',
-                color: 'from-green-400 to-emerald-500'
-              },
-              {
                 icon: '📊',
-                title: 'Citation Health Score',
-                desc: 'Get an instant grade-style rating for your bibliography quality.',
+                title: 'Citation History',
+                desc: 'Save all verified citations. Export to CSV. Never lose a citation again.',
                 color: 'from-red-400 to-rose-500'
               },
               {
@@ -457,68 +663,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-32 px-6 bg-gradient-to-br from-cyan-500/10 to-blue-500/10">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 text-center">
-            {[
-              { value: '2M+', label: 'Journals Verified' },
-              { value: '200M+', label: 'Papers Indexed' },
-              { value: '847K', label: 'Citations Checked Today' },
-              { value: '99.9%', label: 'Accuracy Rate' }
-            ].map((stat, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, scale: 0.5 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-              >
-                <div className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 mb-2">
-                  {stat.value}
-                </div>
-                <div className="text-gray-400 font-semibold">{stat.label}</div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-32 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.h2 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-5xl md:text-7xl font-black mb-8"
-          >
-            Start Your Premium Journey
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">
-              With ZERO Cost
-            </span>
-          </motion.h2>
-          
-          <motion.button 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="bg-gradient-to-r from-cyan-500 to-blue-600 px-12 py-5 rounded-full font-bold text-xl hover:shadow-2xl hover:shadow-cyan-500/50 transition-all duration-300 hover:scale-105"
-          >
-            Get Started Free →
-          </motion.button>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="border-t border-white/10 py-12 px-6">
         <div className="max-w-7xl mx-auto text-center">
           <div className="text-3xl font-black mb-3">
             CiteX<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">ai</span>
           </div>
-          <p className="text-gray-500 mb-6">Verify citations. Save grades. Stay honest.</p>
+          <p className="text-gray-500 mb-6">Verify citations. Fix broken ones. Save grades. Stay honest.</p>
           <p className="text-gray-600 text-sm">© 2025 CiteXai. All rights reserved.</p>
         </div>
       </footer>

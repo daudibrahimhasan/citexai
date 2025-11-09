@@ -22,7 +22,6 @@ export async function POST(request) {
     const buffer = Buffer.from(bytes);
 
     // Simple text extraction (works in production)
-    let text = '';
     try {
       // Try to extract basic info from PDF
       const str = buffer.toString('binary');

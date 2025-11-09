@@ -2,73 +2,41 @@ export async function POST(request) {
   try {
     const { citation } = await request.json();
 
-    if (!citation) {
-      return Response.json({ 
-        error: 'No citation provided' 
-      }, { status: 400 });
+    if (!citation || typeof citation !== 'string' || citation.trim().length === 0) {
+      return Response.json({ success: false, error: 'Citation cannot be empty' }, { status: 400 });
     }
 
-    const apiKey = process.env.GROQ_API_KEY;
-    
-    if (!apiKey) {
-      console.error('ERROR: GROQ_API_KEY is not set!');
-      return Response.json({ 
-        error: 'API key not configured. Please set GROQ_API_KEY in .env.local',
-        suggestion: 'Please add your citation manually'
-      });
+    // Simple normalization heuristics to "fix" citation text.
+    let s = citation.trim();
+
+    // Collapse multiple whitespace/newlines into single space
+    s = s.replace(/\s+/g, ' ');
+
+    // Ensure there's a period at the end
+    if (!/[.!?]$/.test(s)) s = s + '.';
+
+    // Fix common spacing after periods (e.g. "Smith, J.(2023)" -> "Smith, J. (2023)")
+    s = s.replace(/\.\s*/g, '. ');
+    s = s.replace(/\)\s*\./g, ').');
+
+    // Normalize DOI if present (remove surrounding punctuation)
+    const doiMatch = s.match(/(10\.\d{4,}\/\S+)/);
+    if (doiMatch) {
+      const doi = doiMatch[1].replace(/[.,;]$/, '');
+      // move DOI to end if not already at end
+      if (!s.endsWith(doi)) {
+        s = s.replace(doiMatch[1], '').trim();
+        if (!s.endsWith('.')) s += '.';
+        s = s + ' ' + doi;
+      }
     }
 
-    console.log('Calling Groq API with citation:', citation);
+    // Capitalize first character (simple)
+    s = s.charAt(0).toUpperCase() + s.slice(1);
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',  // ✅ NEW MODEL (was mixtral-8x7b-32768)
-        max_tokens: 500,
-        temperature: 0.7,
-        messages: [
-          {
-            role: 'user',
-            content: `You are an expert at fixing academic citations. Fix this citation and make it professional. Return ONLY the fixed citation, nothing else: "${citation}"`
-          }
-        ]
-      })
-    });
-
-    const data = await response.json();
-
-    console.log('Groq response:', data);
-
-    if (!response.ok) {
-      console.error('Groq API error:', data);
-      return Response.json({ 
-        error: `Groq API error: ${data.error?.message || 'Unknown error'}`,
-        suggestion: citation
-      });
-    }
-
-    if (data.choices && data.choices[0] && data.choices[0].message) {
-      const suggestion = data.choices[0].message.content.trim();
-      return Response.json({
-        success: true,
-        suggestion: suggestion
-      });
-    }
-
-    return Response.json({ 
-      error: 'No response from AI',
-      suggestion: citation
-    });
-
+    // Return a suggestion
+    return Response.json({ success: true, suggestion: s });
   } catch (error) {
-    console.error('Server error in fix-citation:', error);
-    return Response.json({ 
-      error: `Server error: ${error.message}`,
-      suggestion: 'Please try again later'
-    }, { status: 500 });
+    return Response.json({ success: false, error: String(error.message || error) }, { status: 500 });
   }
 }

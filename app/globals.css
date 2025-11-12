@@ -6,7 +6,7 @@
 /* ----------------------------------------------------------------------------
    IMPORTS & FONTS
    ---------------------------------------------------------------------------- */
-
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
 /* Clash Display - Modern Hero Font */
 @import url('https://api.fontshare.com/v2/css?f[]=clash-display@700,600,500&display=swap');
 
@@ -153,9 +153,6 @@ body {
    NAVIGATION BAR - 3 COLUMN LAYOUT
    ---------------------------------------------------------------------------- */
 
-/* ----------------------------------------------------------------------------
-   NAVIGATION BAR - FIXED WITH MATTE EFFECT
-   ---------------------------------------------------------------------------- */
 
 .navbar {
   position: fixed;
@@ -169,7 +166,18 @@ body {
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   transition: all var(--transition-base);
   will-change: transform, background;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; /* ← ADDED THIS LINE */
 }
+
+.nav-menu-center a,
+.navbar-actions,
+.btn-signin,
+.btn-signup {
+  font-family: inherit;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
 
 .navbar.scrolled {
   background: rgba(246, 244, 241, 0.92);
@@ -1702,9 +1710,9 @@ section {
   outline-offset: 4px;
 }
 
-/* ----------------------------------------------------------------------------
-   FAQ SECTION - ULTRA SMOOTH
-   ---------------------------------------------------------------------------- */
+/* ============================================================================
+   FAQ SECTION - COMPLETE & OPTIMIZED
+   ============================================================================ */
 
 .faq-section {
   background: white;
@@ -1748,6 +1756,7 @@ section {
   cursor: pointer;
   text-align: left;
   transition: background 0.2s ease;
+  min-height: 60px;
 }
 
 .faq-question-btn:hover {
@@ -1764,6 +1773,7 @@ section {
   font-weight: 600;
   color: var(--color-text-primary);
   padding-right: var(--spacing-md);
+  text-align: left;
 }
 
 .faq-chevron {
@@ -1776,20 +1786,22 @@ section {
   transform: rotate(90deg);
 }
 
+/* Dynamic height using CSS Grid - automatically fits content */
 .faq-answer-wrapper {
-  max-height: 0;
+  display: grid;
+  grid-template-rows: 0fr;
   overflow: hidden;
-  transition: max-height 0.4s cubic-bezier(0.2, 0, 0, 1),
-              opacity 0.3s ease;
+  transition: grid-template-rows 0.3s ease, opacity 0.3s ease;
   opacity: 0;
 }
 
 .faq-open .faq-answer-wrapper {
-  max-height: 500px;
+  grid-template-rows: 1fr;
   opacity: 1;
 }
 
 .faq-answer {
+  min-height: 0;
   padding: 0 var(--spacing-xl) var(--spacing-lg);
 }
 
@@ -1798,7 +1810,26 @@ section {
   color: var(--color-text-secondary);
   line-height: 1.7;
   margin: 0;
+  text-align: left;
 }
+
+/* Mobile FAQ adjustments */
+@media (max-width: 768px) {
+  .faq-question-btn {
+    padding: var(--spacing-md);
+    min-height: 50px;
+  }
+  
+  .faq-question-text {
+    font-size: 1rem;
+  }
+  
+  .faq-answer {
+    padding: 0 var(--spacing-md) var(--spacing-md);
+  }
+}
+
+
 
 /* ----------------------------------------------------------------------------
    CTA SECTION - STANDALONE IMAGE
@@ -2077,8 +2108,225 @@ section {
   }
 }
 
+/* ============================================================================
+   ACCESSIBILITY & PERFORMANCE - FINAL OPTIMIZED
+   ============================================================================ */
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* GPU acceleration for animations - prevents lag */
+.navbar,
+.hero-card,
+.feature-card,
+.pricing-card,
+.spotlight-card,
+.history-card,
+.faq-item,
+.btn-primary,
+.btn-secondary,
+.dropzone {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Optimize transitions - faster, smoother */
+* {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Prevent layout shift during animations */
+.pricing-popular {
+  contain: layout style paint;
+}
+
+/* Optimize text rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Better focus states for accessibility */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  transition: outline-offset 0.2s ease;
+}
+
+/* Prevent text selection during animations */
+.btn-primary:active,
+.btn-secondary:active {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Prevent FOUC (Flash of Unstyled Content) */
+.app {
+  opacity: 1;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Hardware acceleration for specific animations */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.btn-spinner {
+  animation: spin 1s linear infinite;
+  will-change: transform;
+}
+
+/* Optimize marquee animation */
+.marquee-track {
+  animation: marquee 30s linear infinite;
+  will-change: transform;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Optimize scroll performance */
+.history-sidebar {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
 /* ----------------------------------------------------------------------------
-   ACCESSIBILITY & PERFORMANCE
+   RESPONSIVE OPTIMIZATIONS
+   ---------------------------------------------------------------------------- */
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  /* Faster scrolling on mobile */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevent zoom on input focus */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+  
+  /* Better touch targets */
+  button,
+  a,
+  .btn-primary,
+  .btn-secondary {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Prevent horizontal scroll */
+  body {
+    overflow-x: hidden;
+  }
+  
+  /* Optimize hero section padding on mobile */
+  .hero {
+    padding: 2rem 0;
+  }
+  
+  .hero-card {
+    padding: 1.5rem;
+  }
+  
+  /* Better mobile textarea */
+  .textarea-main {
+    min-height: 140px;
+  }
+  
+  /* Stack action buttons on mobile */
+  .action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  /* Mobile pricing cards */
+  .pricing-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .pricing-popular {
+    transform: scale(1) !important;
+  }
+  
+  /* Mobile features grid */
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  /* Mobile split hero */
+  .split-hero-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .split-hero-stats {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  /* Mobile FAQ */
+  .faq-question-btn {
+    padding: 1rem;
+    font-size: 1rem;
+  }
+  
+  .faq-answer {
+    padding: 0 1rem 1rem;
+  }
+  
+  /* Prevent animation jank on mobile */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .btn-primary:active,
+  .btn-secondary:active {
+    transform: scale(0.98);
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .pricing-grid,
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Improve touch targets on mobile */
+@media (hover: none) and (pointer: coarse) {
+  .btn-primary,
+  .btn-secondary,
+  .dropzone,
+  .faq-question-btn,
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   ACCESSIBILITY ENHANCEMENTS
    ---------------------------------------------------------------------------- */
 
 /* Reduced Motion Support */
@@ -2090,6 +2338,10 @@ section {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  
+  .marquee-track {
+    animation: none;
   }
 }
 
@@ -2105,36 +2357,802 @@ section {
   }
 }
 
-/* Dark Mode Preparation (Optional) */
-@media (prefers-color-scheme: dark) {
-  /* Add dark mode styles here if needed */
+/* ============================================================================
+   ADVANCED SMOOTH ANIMATIONS - PREMIUM MICRO-INTERACTIONS
+   ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+   CARD HOVER EFFECTS - Smooth lift and shadow
+   ---------------------------------------------------------------------------- */
+
+.feature-card,
+.pricing-card,
+.spotlight-card,
+.history-card {
+  transition: all 0.3s ease;
 }
 
-/* Focus Styles */
-:focus-visible {
-  outline: 2px solid var(--color-brand);
-  outline-offset: 2px;
+.feature-card:hover,
+.pricing-card:hover,
+.spotlight-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
-/* Improve touch targets on mobile */
-@media (hover: none) and (pointer: coarse) {
-  .btn-primary,
-  .btn-secondary,
-  .dropzone,
-  .faq-question-btn,
-  button {
-    min-height: 44px;
-    min-width: 44px;
+.history-card:hover {
+  transform: translateX(4px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* ----------------------------------------------------------------------------
+   SPOTLIGHT SHIMMER EFFECT - Sweeping gradient on hover
+   ---------------------------------------------------------------------------- */
+
+.spotlight-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.spotlight-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.spotlight-card:hover::before {
+  left: 100%;
+}
+
+/* ----------------------------------------------------------------------------
+   BUTTON ANIMATIONS - Subtle elevation
+   ---------------------------------------------------------------------------- */
+
+.btn-primary,
+.btn-secondary,
+.btn-pricing {
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover,
+.btn-pricing.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(80, 92, 70, 0.3);
+}
+
+.btn-secondary:hover,
+.btn-pricing.btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(80, 92, 70, 0.15);
+}
+
+.btn-primary:active,
+.btn-secondary:active {
+  transform: translateY(0);
+}
+
+/* ----------------------------------------------------------------------------
+   NAVIGATION LINK EFFECTS - Smooth color transitions
+   ---------------------------------------------------------------------------- */
+
+.nav-menu-center a,
+.footer-links a {
+  transition: color 0.3s ease;
+  position: relative;
+}
+
+/* Underline effect on hover */
+.nav-menu-center a::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--color-brand);
+  transition: width 0.3s ease;
+}
+
+.nav-menu-center a:hover::after {
+  width: 100%;
+}
+
+/* ----------------------------------------------------------------------------
+   FAQ DROPDOWN - Smooth accordion animation
+   ---------------------------------------------------------------------------- */
+
+.faq-item {
+  transition: all 0.3s ease;
+}
+
+.faq-answer-wrapper {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+  opacity: 0;
+  padding: 0 var(--spacing-xl);
+}
+
+.faq-open .faq-answer-wrapper {
+  max-height: 500px;
+  opacity: 1;
+  padding: 0 var(--spacing-xl) var(--spacing-lg);
+}
+
+.faq-chevron {
+  transition: transform 0.3s ease;
+}
+
+.faq-open .faq-chevron {
+  transform: rotate(90deg);
+}
+
+/* ----------------------------------------------------------------------------
+   PRICING CARD BORDER GLOW - Premium effect
+   ---------------------------------------------------------------------------- */
+
+.pricing-card {
+  position: relative;
+  transition: all 0.3s ease, border-color 0.3s ease;
+}
+
+.pricing-card::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--color-brand), #059669);
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 0.3s ease;
+  filter: blur(8px);
+}
+
+.pricing-card:hover::after {
+  opacity: 0.3;
+}
+
+.pricing-card:hover {
+  border-color: var(--color-brand);
+}
+
+/* ----------------------------------------------------------------------------
+   FEATURE ICON PULSE - Subtle attention-grabber
+   ---------------------------------------------------------------------------- */
+
+.feature-icon {
+  transition: all 0.3s ease;
+}
+
+.feature-card:hover .feature-icon {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(80, 92, 70, 0.2);
+}
+
+/* ----------------------------------------------------------------------------
+   HERO CARD GLOW - Premium landing effect
+   ---------------------------------------------------------------------------- */
+
+.hero-card {
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.hero-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(135deg, var(--color-brand), #059669);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.hero-card:hover::before {
+  opacity: 0.1;
+}
+
+/* ----------------------------------------------------------------------------
+   TEXTAREA FOCUS EFFECT - Smooth border glow
+   ---------------------------------------------------------------------------- */
+
+.textarea-main {
+  transition: all 0.3s ease;
+}
+
+.textarea-main:focus {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px rgba(80, 92, 70, 0.1);
+  transform: scale(1.005);
+}
+
+/* ----------------------------------------------------------------------------
+   DROPZONE DRAG EFFECT - Visual feedback
+   ---------------------------------------------------------------------------- */
+
+.dropzone {
+  transition: all 0.3s ease;
+}
+
+.dropzone:hover {
+  border-color: var(--color-brand);
+  background: rgba(80, 92, 70, 0.02);
+  transform: scale(1.01);
+}
+
+.dropzone.dragging {
+  border-color: var(--color-brand);
+  background: rgba(80, 92, 70, 0.08);
+  transform: scale(1.02);
+  box-shadow: 0 8px 20px rgba(80, 92, 70, 0.15);
+}
+
+/* ----------------------------------------------------------------------------
+   RESULT CARD ENTRANCE - Fade in with scale
+   ---------------------------------------------------------------------------- */
+
+.result-card {
+  animation: resultFadeIn 0.4s ease;
+}
+
+@keyframes resultFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
-/* GPU Acceleration for smooth animations */
-.spotlight-card,
-.pricing-card,
-.feature-card,
-.history-card,
-.navbar {
-  will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
+/* ----------------------------------------------------------------------------
+   SUGGESTION CARD ENTRANCE - Slide up
+   ---------------------------------------------------------------------------- */
+
+.suggestion-card {
+  animation: slideUp 0.3s ease;
 }
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   LIVE BANNER PULSE - Subtle attention
+   ---------------------------------------------------------------------------- */
+
+.live-banner {
+  animation: pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+  }
+  50% {
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   HISTORY SIDEBAR SLIDE - Smooth entrance
+   ---------------------------------------------------------------------------- */
+
+.history-card {
+  animation: slideInLeft 0.3s ease;
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   FOOTER LINK UNDERLINE - Smooth grow effect
+   ---------------------------------------------------------------------------- */
+
+.footer-links a {
+  position: relative;
+}
+
+.footer-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: white;
+  transition: width 0.3s ease;
+}
+
+.footer-links a:hover::after {
+  width: 100%;
+}
+
+/* ----------------------------------------------------------------------------
+   LOGO HOVER - Subtle brand emphasis
+   ---------------------------------------------------------------------------- */
+
+.logo {
+  transition: all 0.3s ease;
+}
+
+.logo:hover {
+  color: var(--color-brand-dark);
+  transform: scale(1.05);
+}
+
+/* ----------------------------------------------------------------------------
+   MOBILE OPTIMIZATIONS - Prevent over-animation on touch
+   ---------------------------------------------------------------------------- */
+
+@media (hover: none) and (pointer: coarse) {
+  /* Disable hover effects on mobile */
+  .spotlight-card::before,
+  .pricing-card::after,
+  .hero-card::before {
+    display: none;
+  }
+  
+  /* Simpler touch feedback */
+  .btn-primary:active,
+  .btn-secondary:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+}
+
+/* ============================================================================
+   SUGGESTION CARD - AI-CORRECTED CITATIONS (ADD TO END OF FILE)
+   ============================================================================ */
+
+.suggestion-card {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border: 2px solid var(--color-brand);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  margin-top: var(--spacing-lg);
+  box-shadow: 0 4px 12px rgba(80, 92, 70, 0.1);
+}
+
+.suggestion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-lg);
+}
+
+.suggestion-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-brand);
+  margin: 0;
+}
+
+.suggestion-title svg {
+  color: var(--color-brand);
+}
+
+.suggestion-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: var(--color-brand);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.citation-formats {
+  margin-top: var(--spacing-md);
+}
+
+.format-tabs {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-md);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.format-tab {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: -2px;
+}
+
+.format-tab:hover {
+  color: var(--color-brand);
+  background: rgba(80, 92, 70, 0.05);
+}
+
+.format-tab.active {
+  color: var(--color-brand);
+  border-bottom-color: var(--color-brand);
+}
+
+.format-content {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+}
+
+.suggestion-text {
+  font-size: 0.9375rem;
+  line-height: 1.8;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-md);
+  padding: var(--spacing-md);
+  background: rgba(80, 92, 70, 0.03);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--color-brand);
+}
+
+.suggestion-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.suggestion-metadata {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--color-border);
+}
+
+.suggestion-metadata h4 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.metadata-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.metadata-grid strong {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metadata-grid span,
+.metadata-grid a {
+  font-size: 0.9375rem;
+  color: var(--color-text-primary);
+}
+
+.metadata-grid a {
+  color: var(--color-brand);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.metadata-grid a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .suggestion-actions {
+    flex-direction: column;
+  }
+  
+  .btn-small {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .format-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .format-tab {
+    flex-shrink: 0;
+  }
+  
+  .metadata-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================================
+   BEAUTIFUL LEGAL PAGES - REDESIGNED
+   Clean, Modern, Centered Layout
+   ============================================================================ */
+
+.legal-minimal {
+  min-height: 100vh;
+  background: #f6f4f1;
+  padding: 4rem 1.5rem 2rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+  color: #2a2a2a;
+}
+
+.legal-wrapper {
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+/* Hero/Title Section */
+.legal-title-section {
+  text-align: center;
+  margin-bottom: 4rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #d4d4d4;
+}
+
+.legal-page-title {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 3rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.03em;
+}
+
+.legal-meta {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.legal-meta span {
+  font-style: italic;
+}
+
+/* Content Area */
+.legal-body {
+  line-height: 1.75;
+  font-size: 1rem;
+  color: #374151;
+}
+
+.legal-body p {
+  margin-bottom: 1.5rem;
+  text-align: justify;
+}
+
+.legal-intro-text {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: #1f2937;
+  text-align: center;
+  padding: 1.5rem 2rem;
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 3rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Section Headings */
+.legal-section {
+  margin-bottom: 3rem;
+}
+
+.legal-section-heading {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #1a1a1a;
+}
+
+/* Lists */
+.legal-list {
+  margin: 1.5rem 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.legal-list li {
+  position: relative;
+  margin-bottom: 1rem;
+  padding-left: 2rem;
+  text-align: left;
+}
+
+.legal-list li:before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: #505c46;
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+/* Emphasis */
+.legal-highlight {
+  display: block;
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  padding: 1rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 6px;
+  font-weight: 600;
+  color: #92400e;
+  text-align: center;
+}
+
+/* Copyright Box */
+.copyright-box {
+  background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+  color: white;
+  padding: 2.5rem;
+  border-radius: 12px;
+  text-align: center;
+  margin: 3rem 0;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.copyright-box p {
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.copyright-title {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #fbbf24;
+}
+
+/* Contact Box */
+.contact-info {
+  background: white;
+  border: 2px solid #e5e7eb;
+  padding: 2rem;
+  border-radius: 12px;
+  margin: 2rem 0;
+  text-align: center;
+}
+
+.contact-info p {
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+/* Links */
+.legal-link {
+  color: #505c46;
+  text-decoration: underline;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.legal-link:hover {
+  color: #1a1a1a;
+}
+
+/* Buttons */
+.btn-legal-modern {
+  display: inline-block;
+  padding: 0.875rem 2rem;
+  background: #1a1a1a;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  margin: 0.5rem;
+}
+
+.btn-legal-modern:hover {
+  background: #505c46;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-legal-outline {
+  display: inline-block;
+  padding: 0.875rem 2rem;
+  background: transparent;
+  color: #1a1a1a;
+  border: 2px solid #1a1a1a;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  margin: 0.5rem;
+}
+
+.btn-legal-outline:hover {
+  background: #1a1a1a;
+  color: white;
+}
+
+/* Footer Minimal */
+.legal-footer-minimal {
+  margin-top: 5rem;
+  padding-top: 2rem;
+  border-top: 1px solid #d4d4d4;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.legal-footer-minimal p {
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .legal-page-title {
+    font-size: 2.25rem;
+  }
+
+  .legal-section-heading {
+    font-size: 1.5rem;
+  }
+
+  .legal-meta {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .legal-body p {
+    text-align: left;
+  }
+}
+
+/* ============================================================================
+   END OF ADVANCED ANIMATIONS
+   ============================================================================ */
+
+

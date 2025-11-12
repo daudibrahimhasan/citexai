@@ -56,8 +56,6 @@ export default function Home() {
   const [results, setResults] = useState<VerificationResult | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isFixing, setIsFixing] = useState(false);
-  const [suggestion, setSuggestion] = useState<string | null>(null);
-  const [selectedFormat, setSelectedFormat] = useState<CitationFormat>('APA');
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfCitations, setPdfCitations] = useState<string[]>([]);
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
@@ -65,7 +63,9 @@ export default function Home() {
   const [showHistory, setShowHistory] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
+  const [suggestion, setSuggestion] = useState<any>(null);
+  const [selectedFormat, setSelectedFormat] = useState<CitationFormat>('APA'); // FIXED TYPE
+
   /* --------------------------------------------------------------------------
      LIFECYCLE EFFECTS
      -------------------------------------------------------------------------- */
@@ -145,7 +145,7 @@ export default function Home() {
       });
       const data = await response.json();
       if (data.success) {
-        setSuggestion(data.suggestion);
+        setSuggestion(data);
       } else {
         alert('❌ Error: ' + data.error);
       }
@@ -269,7 +269,7 @@ export default function Home() {
               
               <ul className="nav-menu-center" role="menubar">
                 <li role="none"><a href="#features" role="menuitem">PRODUCT</a></li>
-                <li role="none"><a href="https://www.youware.com/about" target="_blank" rel="noopener noreferrer" role="menuitem">ABOUT US</a></li>
+                <li role="none"><a href="/about" target="_blank" rel="noopener noreferrer" role="menuitem">ABOUT US</a></li>
                 <li role="none"><a href="https://discord.gg/6fBAZ2tzfK" target="_blank" rel="noopener noreferrer" role="menuitem">COMMUNITY</a></li>
                 <li role="none"><a href="#pricing" role="menuitem">PRICING</a></li>
               </ul>
@@ -559,28 +559,143 @@ export default function Home() {
                   </motion.button>
                 </div>
 
+                {/* AI SUGGESTION CARD - UPGRADED */}
                 {suggestion && (
                   <motion.div 
                     initial={{ opacity: 0, y: 10 }} 
                     animate={{ opacity: 1, y: 0 }}
                     className="suggestion-card"
                   >
-                    <p className="suggestion-title">
-                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                        <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      AI Suggestion:
-                    </p>
-                    <p className="suggestion-text">{suggestion}</p>
-                    <button type="button" onClick={applySuggestion} className="btn-primary btn-small">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                        <path d="M13.5 4L6 11.5l-3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      Apply This Suggestion
-                    </button>
+                    <div className="suggestion-header">
+                      <p className="suggestion-title">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                          <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        AI-Corrected Citation
+                      </p>
+                      {suggestion.source && (
+                        <span className="suggestion-badge">From {suggestion.source}</span>
+                      )}
+                    </div>
+
+                    {suggestion.suggestions ? (
+                      <>
+                        {/* Format Tabs */}
+                        <div className="citation-formats">
+                          <div className="format-tabs">
+                            <button 
+                              className={`format-tab ${selectedFormat === 'APA' ? 'active' : ''}`}
+                              onClick={() => setSelectedFormat('APA')}
+                            >
+                              APA
+                            </button>
+                            <button 
+                              className={`format-tab ${selectedFormat === 'MLA' ? 'active' : ''}`}
+                              onClick={() => setSelectedFormat('MLA')}
+                            >
+                              MLA
+                            </button>
+                            <button 
+                              className={`format-tab ${selectedFormat === 'CHICAGO' ? 'active' : ''}`}
+                              onClick={() => setSelectedFormat('CHICAGO')}
+                            >
+                              Chicago
+                            </button>
+                          </div>
+
+                          <div className="format-content">
+                            <p className="suggestion-text">
+                              {suggestion.suggestions[selectedFormat]}
+                            </p>
+                            
+                            <div className="suggestion-actions">
+                              <button 
+                                type="button" 
+                                onClick={() => {
+                                  setCitation(suggestion.suggestions[selectedFormat]);
+                                  setSuggestion(null);
+                                }} 
+                                className="btn-primary btn-small"
+                              >
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                  <path d="M13.5 4L6 11.5l-3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                                Apply Citation
+                              </button>
+                              
+                              <button 
+                                type="button" 
+                                onClick={() => {
+                                  navigator.clipboard.writeText(suggestion.suggestions[selectedFormat]);
+                                  alert('Citation copied to clipboard!');
+                                }} 
+                                className="btn-secondary btn-small"
+                              >
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                  <path d="M5 4V3a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2h-1M3 8h6a2 2 0 012 2v6a2 2 0 01-2 2H3a2 2 0 01-2-2v-6a2 2 0 012-2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                                Copy
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Metadata Display */}
+                        {suggestion.metadata && (
+                          <div className="suggestion-metadata">
+                            <h4>Verified Details:</h4>
+                            <div className="metadata-grid">
+                              <div>
+                                <strong>Title:</strong>
+                                <span>{suggestion.metadata.title}</span>
+                              </div>
+                              <div>
+                                <strong>Authors:</strong>
+                                <span>
+                                  {suggestion.metadata.authors?.slice(0, 3).join(', ')}
+                                  {suggestion.metadata.authors?.length > 3 ? ', et al.' : ''}
+                                </span>
+                              </div>
+                              <div>
+                                <strong>Year:</strong>
+                                <span>{suggestion.metadata.year}</span>
+                              </div>
+                              <div>
+                                <strong>Journal:</strong>
+                                <span>{suggestion.metadata.journal}</span>
+                              </div>
+                              {suggestion.metadata.doi !== 'N/A' && (
+                                <div>
+                                  <strong>DOI:</strong>
+                                  <a 
+                                    href={`https://doi.org/${suggestion.metadata.doi}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                  >
+                                    {suggestion.metadata.doi}
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {/* Fallback for old simple format */}
+                        <p className="suggestion-text">{suggestion}</p>
+                        <button type="button" onClick={applySuggestion} className="btn-primary btn-small">
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="M13.5 4L6 11.5l-3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                          Apply This Suggestion
+                        </button>
+                      </>
+                    )}
                   </motion.div>
                 )}
 
+                {/* Format Converter */}
                 {results && results.verified && (
                   <div className="format-converter">
                     <h3 className="format-title">
@@ -615,6 +730,7 @@ export default function Home() {
                   </div>
                 )}
 
+                {/* Results Card */}
                 {results && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.98 }}
@@ -1108,7 +1224,7 @@ export default function Home() {
             <div className="footer-col">
               <h4 className="footer-title">Company</h4>
               <ul className="footer-links">
-                <li><a href="https://www.youware.com/about">About Us</a></li>
+                <li><a href="/about">About Us</a></li>
                 <li><a href="https://discord.gg/6fBAZ2tzfK">Community</a></li>
                 <li><a href="mailto:daudibrahimhasan@gmail.com">Contact</a></li>
               </ul>
@@ -1117,14 +1233,14 @@ export default function Home() {
             <div className="footer-col">
               <h4 className="footer-title">Legal</h4>
               <ul className="footer-links">
-                <li><a href="#">Privacy Policy</a></li>
-                <li><a href="#">Terms of Service</a></li>
+                <li><a href="/privacy">Privacy Policy</a></li>
+                <li><a href="/terms">Terms of Service</a></li>
               </ul>
             </div>
           </div>
 
           <div className="footer-bottom">
-            <p>© 2025 CiteXai. All rights reserved.</p>
+            <p>© 2025 CiteXai. Built by <strong>DaudX</strong> • <a href="mailto:daudibrahimhasan@gmail.com">daudibrahimhasan@gmail.com</a></p>
           </div>
         </div>
       </footer>

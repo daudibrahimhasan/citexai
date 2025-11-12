@@ -270,7 +270,7 @@ export default function Home() {
               <ul className="nav-menu-center" role="menubar">
                 <li role="none"><a href="#features" role="menuitem">PRODUCT</a></li>
                 <li role="none"><a href="/about" target="_blank" rel="noopener noreferrer" role="menuitem">ABOUT US</a></li>
-                <li role="none"><a href="https://discord.gg/6fBAZ2tzfK" target="_blank" rel="noopener noreferrer" role="menuitem">COMMUNITY</a></li>
+                <li role="none"><a href="https://www.linkedin.com/in/daudibrahimhasan/" target="_blank" rel="noopener noreferrer" role="menuitem">COMMUNITY</a></li>
                 <li role="none"><a href="#pricing" role="menuitem">PRICING</a></li>
               </ul>
               

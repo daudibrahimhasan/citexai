@@ -131,31 +131,36 @@ export default function Home() {
     }
   };
   
-  const fixCitation = async () => {
+    const fixCitation = async () => {
     if (!citation.trim()) {
       alert('Please enter a citation to fix!');
       return;
     }
+    
     setIsFixing(true);
+    
     try {
       const response = await fetch('/api/fix-citation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ citation }),
+        body: JSON.stringify({ citation })
       });
+      
       const data = await response.json();
+      console.log('API Response:', data);
+      
       if (data.success) {
-        setSuggestion(data);
+        setSuggestion(data.suggestion);  // ✅ ONLY the string
       } else {
-        alert('❌ Error: ' + data.error);
+        alert(`Error: ${data.error}`);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      alert('❌ Error: ' + errorMessage);
+      alert(`Error: ${error.message}`);
     } finally {
       setIsFixing(false);
     }
   };
+
   
   const applySuggestion = () => {
     if (suggestion) {

@@ -1,5 +1,5 @@
 // ============================================================================
-// CITEXAI - CITATION VERIFICATION API (COMPLETE & WORKING)
+// CITEXAI - CITATION VERIFICATION API (IMPROVED WITH SMART RANKING)
 // ============================================================================
 
 const cache = new Map();
@@ -30,7 +30,8 @@ function parseCitation(citation) {
                     citation.match(/\b(19\d{2}|20[0-2]\d)\b/);
   if (yearMatch) parsed.year = parseInt(yearMatch[1]);
 
-  let authorMatch = citation.match(/^([A-Z][a-z]+(?:,\s*[A-Z]\.?(?:\s*[A-Z]\.?)?)?)/);
+  // IMPROVED: Extract multiple authors
+  let authorMatch = citation.match(/^([A-Z][a-z]+(?:\s+[A-Z])?(?:,\s*[A-Z][a-z]+(?:\s+[A-Z])?)*)/);
   if (!authorMatch) {
     authorMatch = citation.match(/^([A-Z][a-z]+(?:\s+et\s+al\.?)?)/);
   }
@@ -41,17 +42,19 @@ function parseCitation(citation) {
     parsed.author = authorMatch[1].trim().replace(/[,.]$/g, '');
   }
 
+  // IMPROVED: Better title extraction
   let titleMatch = citation.match(/["']([^"']+)["']/);
-  if (!titleMatch) {
-    titleMatch = citation.match(/\(\d{4}\)\.\s*([^.]+?)(?:\.|,\s*(?:In|Journal|Nature|Science|Proceedings|Advances))/i);
+  if (!titleMatch && parsed.author) {
+    // Extract everything after author and year
+    const afterAuthor = citation.replace(parsed.author, '').trim();
+    if (parsed.year) {
+      const afterYear = afterAuthor.replace(String(parsed.year), '').replace(/^\s*[(),.\s]+/, '');
+      titleMatch = { 1: afterYear.split(/[.(]/)[0].trim() };
+    } else {
+      titleMatch = { 1: afterAuthor.replace(/^\s*[(),.\s]+/, '').split(/[.(]/)[0].trim() };
+    }
   }
-  if (!titleMatch) {
-    titleMatch = citation.match(/\d{4}\D+?([A-Z][^.]+?)\.?\s*(?:Journal|Nature|Science|In|Proceedings)/i);
-  }
-  if (!titleMatch) {
-    titleMatch = citation.match(/\d{4}\D+?([A-Z].+?)(?=\s+(?:Journal|Nature|Science|Proceedings|Advances|In))/i);
-  }
-  if (titleMatch) {
+  if (titleMatch && titleMatch[1]) {
     parsed.title = titleMatch[1].trim().replace(/\s*\(\d+(?:st|nd|rd|th)?\s*ed\.?\)\.?$/, '');
   }
 
@@ -134,32 +137,100 @@ async function validateDOI(doi) {
   return { valid: false, metadata: null };
 }
 
+// ============================================================================
+// IMPROVED: SMART RANKING ALGORITHM
+// ============================================================================
+
+function calculateRelevanceScore(parsed, work) {
+  let score = 0;
+  
+  // Author matching (50 points)
+  if (parsed.author && work.authorships) {
+    const inputAuthor = parsed.author.toLowerCase().split(/[,\s]+/)[0];
+    const hasAuthorMatch = work.authorships.some(a => 
+      a.author.display_name.toLowerCase().includes(inputAuthor) ||
+      inputAuthor.includes(a.author.display_name.toLowerCase().split(' ').pop())
+    );
+    if (hasAuthorMatch) score += 50;
+  }
+  
+  // Year matching (30 points)
+  if (parsed.year && work.publication_year) {
+    if (parsed.year === work.publication_year) {
+      score += 30;
+    } else if (Math.abs(parsed.year - work.publication_year) === 1) {
+      score += 15;
+    }
+  }
+  
+  // Title similarity (20 points)
+  if (parsed.title && work.title) {
+    const inputTitle = parsed.title.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+    const workTitle = work.title.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+    
+    const inputWords = inputTitle.split(/\s+/).filter(w => w.length > 3);
+    const workWords = workTitle.split(/\s+/);
+    
+    const matchingWords = inputWords.filter(word => 
+      workWords.some(w => w.includes(word) || word.includes(w))
+    );
+    
+    const similarity = matchingWords.length / Math.max(inputWords.length, 1);
+    score += similarity * 20;
+  }
+  
+  return score;
+}
+
 async function searchOpenAlex(parsed) {
-  if (!parsed.title) return null;
+  if (!parsed.title && !parsed.author) return null;
+  
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     
-    let query = parsed.title.substring(0, 80);
+    // Build smarter query
+    let query = '';
+    if (parsed.title) query += parsed.title.substring(0, 80);
     if (parsed.author) query += ` ${parsed.author.substring(0, 30)}`;
+    if (parsed.year) query += ` ${parsed.year}`;
+    
+    console.log('🔍 OpenAlex query:', query.trim());
     
     const response = await fetch(
-      `https://api.openalex.org/works?search=${encodeURIComponent(query)}`,
-      { signal: controller.signal }
+      `https://api.openalex.org/works?search=${encodeURIComponent(query.trim())}&per-page=10`,
+      { 
+        signal: controller.signal,
+        headers: { 'User-Agent': 'CiteXai/1.0 (mailto:support@citexai.com)' }
+      }
     );
     
     clearTimeout(timeoutId);
 
     if (response.ok) {
       const data = await response.json();
-      if (data.results?.[0]) {
-        const work = data.results[0];
+      
+      if (data.results && data.results.length > 0) {
+        // RANK results by relevance
+        const rankedResults = data.results.map(work => ({
+          work,
+          score: calculateRelevanceScore(parsed, work)
+        }));
+        
+        // Sort by score (highest first)
+        rankedResults.sort((a, b) => b.score - a.score);
+        
+        const bestMatch = rankedResults[0];
+        console.log('✅ Best match:', bestMatch.work.title, '(relevance score:', bestMatch.score, ')');
+        
+        const work = bestMatch.work;
         return {
           title: work.title,
           authors: work.authorships?.map(a => a.author.display_name) || [],
           year: work.publication_year,
           journal: work.primary_location?.source?.display_name || null,
-          doi: work.doi?.replace('https://doi.org/', '') || null
+          doi: work.doi?.replace('https://doi.org/', '') || null,
+          relevanceScore: bestMatch.score
         };
       }
     }
@@ -206,7 +277,7 @@ async function searchGoogleBooks(parsed) {
 
 function checkConsistency(parsed, metadata) {
   if (!metadata) return 0;
-  let score = 0;
+  let score = metadata.relevanceScore || 0;
   
   if (parsed.title && metadata.title) {
     const p = parsed.title.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -228,7 +299,7 @@ function checkConsistency(parsed, metadata) {
     else if (Math.abs(parsed.year - metadata.year) === 1) score += 15;
   }
   
-  return score;
+  return Math.min(score, 100);
 }
 
 // ============================================================================
@@ -323,7 +394,7 @@ export async function POST(request) {
       return Response.json(result);
     }
     
-    // Database search
+    // Database search with SMART RANKING
     const [openalexResult, bookResult] = await Promise.all([
       searchOpenAlex(parsed),
       searchGoogleBooks(parsed)
@@ -334,12 +405,12 @@ export async function POST(request) {
     if (bestMatch) {
       metadata = bestMatch;
       const consistency = checkConsistency(parsed, bestMatch);
-      score = Math.min(consistency + 40, 100);
+      score = Math.min(consistency, 100);
       
       if (consistency >= 70) {
-        checks.push(`✅ Found in ${bookResult ? 'Google Books' : 'OpenAlex'}`);
+        checks.push(`✅ Found in ${bookResult ? 'Google Books' : 'OpenAlex'} (${consistency}% match)`);
       } else if (consistency >= 40) {
-        checks.push('⚠️ Partial match in database');
+        checks.push(`⚠️ Partial match in database (${consistency}%)`);
       }
     } else {
       checks.push('❌ Not found in databases');

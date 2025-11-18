@@ -117,8 +117,9 @@ export default function Home() {
         limit: data.limit || 25
       });
     } catch (error) {
-      console.error('Error fetching user usage:', error);
+      alert(`Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
     }
+
   };
 
   /* --------------------------------------------------------------------------
@@ -189,9 +190,9 @@ export default function Home() {
         setSuggestion(data.suggestion);  // ✅ ONLY the string
       } else {
         alert(`Error: ${data.error}`);
-      }
+      }  
     } catch (error) {
-      alert(`Error: ${error.message}`);
+      alert(`Error: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsFixing(false);
     }

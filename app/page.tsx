@@ -5,6 +5,10 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatCitation } from './utils/formatConverter';
+import { useSession, signIn, signOut } from 'next-auth/react';
+import { SessionProvider } from 'next-auth/react';
+import ProfileDropdown from './components/ProfileDropdown';
+
 
 /* ============================================================================
    TYPE DEFINITIONS
@@ -51,9 +55,10 @@ export default function Home() {
   /* --------------------------------------------------------------------------
      STATE MANAGEMENT
      -------------------------------------------------------------------------- */
-  
+  const { data: session } = useSession();
   const [citation, setCitation] = useState('');
   const [results, setResults] = useState<VerificationResult | null>(null);
+  const [userUsage, setUserUsage] = useState<{ usage_count: number; limit: number } | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isFixing, setIsFixing] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -64,7 +69,9 @@ export default function Home() {
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [suggestion, setSuggestion] = useState<any>(null);
-  const [selectedFormat, setSelectedFormat] = useState<CitationFormat>('APA'); // FIXED TYPE
+  const [selectedFormat, setSelectedFormat] = useState<CitationFormat>('APA');
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
 
   /* --------------------------------------------------------------------------
      LIFECYCLE EFFECTS
@@ -87,6 +94,33 @@ export default function Home() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
   
+  useEffect(() => {
+  if (session?.user?.email) {
+    fetchUserUsage();
+  }
+}, [session]);
+
+  // Fetch user usage stats
+  const fetchUserUsage = async () => {
+    if (!session?.user?.email) return;
+    
+    try {
+      const response = await fetch('/api/user/access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: session.user.email })
+      });
+      
+      const data = await response.json();
+      setUserUsage({
+        usage_count: data.usage_count || 0,
+        limit: data.limit || 25
+      });
+    } catch (error) {
+      console.error('Error fetching user usage:', error);
+    }
+  };
+
   /* --------------------------------------------------------------------------
      CORE FUNCTIONS
      -------------------------------------------------------------------------- */
@@ -103,7 +137,9 @@ export default function Home() {
       const response = await fetch('/api/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ citation }),
+        body: JSON.stringify({ 
+        citation,
+        userEmail: session?.user?.email || null}),
       });
       const data = await response.json();
       const resultData: VerificationResult = {
@@ -294,19 +330,28 @@ export default function Home() {
               
               <div className="navbar-actions">
                 <button 
-                  type="button"
+                  type="button" 
                   onClick={() => setShowHistory(!showHistory)} 
                   className="btn-text"
-                  aria-label={`View history (${history.length} items)`}
                 >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M3 4h10M3 8h10M3 12h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                  </svg>
                   History ({history.length})
                 </button>
-                <a href="/signin" className="btn-secondary btn-signin">Sign in</a>
-                <a href="/signup" className="btn-primary btn-signup">Sign up</a>
+                
+                {session ? (
+                  <ProfileDropdown 
+                    session={session}
+                    userUsage={userUsage}
+                    showProfileMenu={showProfileMenu}
+                    setShowProfileMenu={setShowProfileMenu}
+                  />
+                ) : (
+                  <>
+                    <button onClick={() => signIn('google')} className="btn-secondary btn-signin">Sign In</button>
+                    <button onClick={() => signIn('google')} className="btn-primary btn-signup">Sign Up</button>
+                  </>
+                )}
               </div>
+
             </div>
           </div>
         </nav>

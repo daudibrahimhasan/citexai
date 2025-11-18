@@ -1,10 +1,14 @@
+'use client';
+
 import './globals.css';
-import type { Metadata } from 'next';
 import { Roboto_Flex, Roboto_Mono } from 'next/font/google';
+import { SessionProvider } from 'next-auth/react';
+
 
 /* ============================================================================
    FONT CONFIGURATION
    ============================================================================ */
+
 
 const robotoFlex = Roboto_Flex({
   subsets: ['latin'],
@@ -12,107 +16,18 @@ const robotoFlex = Roboto_Flex({
   display: 'swap',
 });
 
+
 const robotoMono = Roboto_Mono({
   subsets: ['latin'],
   variable: '--font-roboto-mono',
   display: 'swap',
 });
 
-/* ============================================================================
-   SEO METADATA - ENHANCED
-   ============================================================================ */
-
-export const metadata: Metadata = {
-  title: 'CiteXai - AI-Powered Citation Verification | Stop Citing Fake Papers',
-  description: 'Verify citations instantly against 200M+ papers. Catch fake ChatGPT citations and broken DOIs with 99.2% accuracy. Free citation checker and formatter for APA, MLA, Chicago.',
-  keywords: [
-    'citation verification',
-    'citation checker',
-    'fake citation detector',
-    'academic citations',
-    'APA formatter',
-    'MLA formatter',
-    'ChatGPT citations',
-    'DOI verification',
-    'research paper checker',
-    'bibliography verification'
-  ],
-  authors: [{ name: 'CiteXai Team' }],
-  creator: 'CiteXai',
-  publisher: 'CiteXai',
-  
-  // Open Graph (Facebook, LinkedIn)
-  openGraph: {
-    type: 'website',
-    locale: 'en_US',
-    url: 'https://citexai.com',
-    siteName: 'CiteXai',
-    title: 'CiteXai - Stop Citing Fake Papers',
-    description: 'AI-powered citation verification with 99.2% accuracy. Verify against 200M+ papers. Free forever.',
-    images: [
-      {
-        url: 'https://citexai.com/og-image.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'CiteXai Citation Verification Platform',
-        type: 'image/jpeg',
-      },
-    ],
-  },
-  
-  // Twitter Card
-  twitter: {
-    card: 'summary_large_image',
-    site: '@citexai',
-    creator: '@citexai',
-    title: 'CiteXai - AI Citation Verification',
-    description: 'Verify citations instantly. Catch fake papers. Free forever.',
-    images: ['https://citexai.com/twitter-image.jpg'],
-  },
-  
-  // Robots
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
-  
-  // Verification
-  verification: {
-    google: 'your-google-verification-code',
-    // Add your actual verification codes when you have them
-  },
-  
-  // Other
-  category: 'education',
-  applicationName: 'CiteXai',
-  referrer: 'origin-when-cross-origin',
-  
-  // Alternate Languages (if you expand internationally)
-  alternates: {
-    canonical: 'https://citexai.com',
-  },
-  
-  // Icons
-  icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
-  },
-  
-  // Manifest
-  manifest: '/site.webmanifest',
-};
 
 /* ============================================================================
    ROOT LAYOUT
    ============================================================================ */
+
 
 export default function RootLayout({ 
   children 
@@ -122,6 +37,57 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Primary Meta Tags */}
+        <title>CiteXai - AI-Powered Citation Verification | Stop Citing Fake Papers</title>
+        <meta name="title" content="CiteXai - AI-Powered Citation Verification | Stop Citing Fake Papers" />
+        <meta name="description" content="Verify citations instantly against 200M+ papers. Catch fake ChatGPT citations and broken DOIs with 99.2% accuracy. Free citation checker and formatter for APA, MLA, Chicago." />
+        <meta name="keywords" content="citation verification, citation checker, fake citation detector, academic citations, APA formatter, MLA formatter, ChatGPT citations, DOI verification, research paper checker, bibliography verification" />
+        <meta name="author" content="CiteXai Team" />
+        <meta name="creator" content="CiteXai" />
+        <meta name="publisher" content="CiteXai" />
+        <meta name="category" content="education" />
+        <meta name="referrer" content="origin-when-cross-origin" />
+        
+        {/* Open Graph / Facebook / LinkedIn */}
+        <meta property="og:type" content="website" />
+        <meta property="og:locale" content="en_US" />
+        <meta property="og:url" content="https://citexai.com" />
+        <meta property="og:site_name" content="CiteXai" />
+        <meta property="og:title" content="CiteXai - Stop Citing Fake Papers" />
+        <meta property="og:description" content="AI-powered citation verification with 99.2% accuracy. Verify against 200M+ papers. Free forever." />
+        <meta property="og:image" content="https://citexai.com/og-image.jpg" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="CiteXai Citation Verification Platform" />
+        <meta property="og:image:type" content="image/jpeg" />
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@citexai" />
+        <meta name="twitter:creator" content="@citexai" />
+        <meta name="twitter:title" content="CiteXai - AI Citation Verification" />
+        <meta name="twitter:description" content="Verify citations instantly. Catch fake papers. Free forever." />
+        <meta name="twitter:image" content="https://citexai.com/twitter-image.jpg" />
+        
+        {/* Robots */}
+        <meta name="robots" content="index, follow" />
+        <meta name="googlebot" content="index, follow, max-video-preview:-1, max-image-preview:large, max-snippet:-1" />
+        
+        {/* Canonical */}
+        <link rel="canonical" href="https://citexai.com" />
+        
+        {/* Icons */}
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="shortcut icon" href="/favicon-16x16.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        
+        {/* Manifest */}
+        <link rel="manifest" href="/site.webmanifest" />
+        
+        {/* Theme */}
+        <meta name="theme-color" content="#505c46" />
+        <meta name="color-scheme" content="light" />
+        
         {/* Structured Data - JSON-LD */}
         <script
           type="application/ld+json"
@@ -149,18 +115,16 @@ export default function RootLayout({
               author: {
                 '@type': 'Organization',
                 name: 'CiteXai',
-                url: 'https://citexai.com',
+                url: 'https://citexai-beta.vercel.app',
               },
             }),
           }}
         />
-        
-        {/* Additional Meta Tags */}
-        <meta name="theme-color" content="#505c46" />
-        <meta name="color-scheme" content="light" />
       </head>
       <body className={`${robotoFlex.variable} ${robotoMono.variable}`}>
-        {children}
+        <SessionProvider>
+          {children}
+        </SessionProvider>
       </body>
     </html>
   );

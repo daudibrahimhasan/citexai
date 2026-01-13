@@ -1,0 +1,55 @@
+/* CLIP ICON & UPLOAD OVERLAY */
+.btn-clip {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  background: white;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  padding: 0.5rem;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  z-index: 5;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-clip:hover {
+  color: var(--color-brand);
+  border-color: var(--color-brand);
+  background: var(--color-bg);
+  transform: translateY(-1px);
+}
+
+.btn-clip:active {
+  transform: translateY(0);
+}
+
+.pdf-upload-overlay {
+  position: absolute;
+  inset: 0;
+  background: white;
+  border-radius: var(--radius-md);
+  z-index: 10;
+  overflow: hidden;
+  border: 1.5px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.pdf-uploader-content {
+  padding: var(--spacing-md);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* Ensure dropped content matches textarea-main border visually */
+.pdf-upload-overlay {
+  /* Match textarea-main border and radius */
+  border-radius: var(--radius-md);
+}

@@ -3,10 +3,13 @@ import GoogleProvider from "next-auth/providers/google";
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+// Initialize Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabase = (supabaseUrl && supabaseKey) 
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
 
 export const authOptions = {
   providers: [
@@ -17,6 +20,8 @@ export const authOptions = {
   ],
   callbacks: {
     async signIn({ user }) {
+      if (!supabase) return true; // Allow sign in without DB if supabase not configured
+
       // Save or update user in Supabase
       try {
         const { data: existingUser } = await supabase

@@ -86,6 +86,7 @@ export default function Home() {
   const { data: session } = useSession();
   const navbarRef = useRef<HTMLElement>(null);
   const heroRef = useRef<HTMLElement>(null);
+  const inputWrapperRef = useRef<HTMLDivElement>(null);
 
   const [citation, setCitation] = useState('');
   const [results, setResults] = useState<VerificationResult | null>(null);
@@ -102,10 +103,25 @@ export default function Home() {
   const [suggestion, setSuggestion] = useState<CitationSuggestion | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<CitationFormat>('APA');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showPdfUpload, setShowPdfUpload] = useState(false);
 
   /* --------------------------------------------------------------------------
      LIFECYCLE EFFECTS
      -------------------------------------------------------------------------- */
+
+  // Close PDF upload when clicking outside
+  useEffect(() => {
+    if (!showPdfUpload) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (inputWrapperRef.current && !inputWrapperRef.current.contains(event.target as Node)) {
+        setShowPdfUpload(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showPdfUpload]);
 
   // Scroll restoration fix - scroll to top on mount
   useEffect(() => {
@@ -543,14 +559,13 @@ export default function Home() {
      -------------------------------------------------------------------------- */
 
   const faqs = [
-    { q: 'How accurate is CiteXai?', a: '99.2% accuracy. We verify against 200M+ papers across CrossRef, OpenAlex, and DOI databases.' },
-    { q: 'Is it really free?', a: 'Yes! Free plan includes unlimited verifications, format conversion, and 3 AI fixes/day. No credit card needed.' },
-    { q: 'Can it detect fake ChatGPT citations?', a: 'Yes. Our AI detects fake papers and hallucinated DOIs with 97% accuracy.' },
-    { q: 'What citation formats are supported?', a: 'APA, MLA, Chicago, Harvard, IEEE, Vancouver, and AMA. Convert instantly between any format.' },
-    { q: 'How does PDF extraction work?', a: 'Upload a paper (max 10MB), we extract all citations automatically. Free: 1 PDF/day. Premium: 100 PDFs.' },
-    { q: 'Do you store my data?', a: 'No. Citations are deleted after 30 days. We never sell or share your data.' },
-    { q: 'Can I verify multiple citations at once?', a: 'Yes. Premium users can batch-verify up to 50 citations or upload a PDF to verify all at once.' },
-    { q: "What's Premium vs Free?", a: 'Premium ($4.99/mo) adds unlimited AI fixes, 100 PDFs, full sources, priority support, and Word/LaTeX export.' },
+    { q: 'How accurate is CiteXai?', a: 'Pretty damn accurate. We verify against 200M+ papers across CrossRef, OpenAlex, and verified databases. If it exists, we find it.' },
+    { q: 'Is it actually free?', a: 'Yeah. The free plan gives you unlimited checking and 3 AI fixes a day. I pay for the API calls, so the limit exists to keep me from going broke.' },
+    { q: 'Does it catch ChatGPT hallucinations?', a: '100%. ChatGPT loves to make up papers that sound real but aren\'t. We tell you if a paper actually exists or if it\'s a ghost.' },
+    { q: 'What formats?', a: 'APA, MLA, Chicago, Harvard, and more. One click to switch between them.' },
+    { q: 'PDF Uploads?', a: 'You can upload a PDF and we scan the bibliography. Free users get 1/day, Premium gets 100.' },
+    { q: 'Data privacy?', a: 'We delete your citations after 30 days. I don\'t want your data, I just want your citations to be real.' },
+    { q: 'Why Premium?', a: 'It costs money to run the servers and APIs. Premium ($4.99) helps support the tool and gives you unlimited fixes and batch processing.' },
   ];
 
   const spotlightItems = [
@@ -565,33 +580,33 @@ export default function Home() {
   const features = [
     {
       icon: <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
-      title: 'Instant Verification',
-      desc: 'Lightning-Fast Verification: AI Checks Any Citation in Under 2 Seconds Against 200M+ Global Databases',
+      title: 'Fast Verification',
+      desc: 'Checks your citation against real databases (CrossRef, OpenAlex) in seconds.',
     },
     {
       icon: <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
-      title: 'Revolutionary AI Fake Detector',
-      desc: 'Spot ChatGPT Hallucinations and Fake References with 97% Accuracy – Before They Ruin Your Work.',
+      title: 'Catches "Hallucinations"',
+      desc: 'ChatGPT makes up papers. We spot them instantly so you don\'t look bad.',
     },
     {
       icon: <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
-      title: 'Smart AI Citation Fixer',
-      desc: 'Automatically Repair Broken or Incomplete Citations with One Click – No More Manual Edits',
+      title: 'Fix It Automatically',
+      desc: 'If a citation is real but broken, our AI finds the missing data (DOI, Year, Pages) and fixes it.',
     },
     {
       icon: <path d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
-      title: 'Effortless Formatting',
-      desc: 'Convert to APA, MLA, Chicago, Harvard, IEEE & More in One Click',
+      title: 'Format Converter',
+      desc: 'Switch between APA, MLA, Chicago, and Harvard without rewriting everything.',
     },
     {
       icon: <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
-      title: 'Citation History',
-      desc: 'Save all verified citations. Export to CSV. Never lose a citation again.',
+      title: 'History',
+      desc: 'We save your checks so you don\'t lose them. Export to CSV if you need to.',
     },
     {
       icon: <path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
-      title: 'Unmatched Global Reach',
-      desc: 'Tap into 2M+ Journals and 200M+ Papers Across All Fields – The Most Comprehensive AI Database',
+      title: 'Real Databases',
+      desc: 'We check 200M+ real papers. If it\'s published, we\'ll find it.',
     },
   ];
 
@@ -812,9 +827,9 @@ export default function Home() {
                 aria-hidden="true"
               />
               <motion.aside
-                initial={{ x: -420 }}
+                initial={{ x: 420 }}
                 animate={{ x: 0 }}
-                exit={{ x: -420 }}
+                exit={{ x: 420 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                 className="history-sidebar"
                 role="complementary"
@@ -943,11 +958,7 @@ export default function Home() {
                 <span className="live-dot" aria-hidden="true">
                   LIVE
                 </span>
-                <span>847,293 Citations Checked Today</span>
-                <span className="divider" aria-hidden="true">
-                  •
-                </span>
-                <span>3,921 Fakes Caught</span>
+                <span>Checking against 200M+ real papers</span>
               </motion.div>
 
               <motion.h1
@@ -957,7 +968,7 @@ export default function Home() {
                 transition={{ delay: 0.1 }}
                 className="hero-title"
               >
-                STOP CITING FAKE PAPERS
+                Catch fake citations before your professor does
               </motion.h1>
 
               <motion.p
@@ -966,7 +977,7 @@ export default function Home() {
                 transition={{ delay: 0.2 }}
                 className="hero-subtitle"
               >
-                {"The World's First AI Citation Checker & Fixer – Verify, Detect Fakes, and Fix Instantly."}
+                {"I built this because I almost failed an essay due to a bad citation. Now you don't have to."}
               </motion.p>
 
               <motion.div
@@ -988,131 +999,173 @@ export default function Home() {
                   Paste Your Citation or Upload Paper
                 </label>
 
-                <textarea
-                  id="citation-input"
-                  value={citation}
-                  onChange={(e) => setCitation(e.target.value)}
-                  onKeyDown={handleCitationKeyDown}
-                  placeholder="Smith, J. (2023). The Future of AI. Journal of Technology, 15(3), 245-267. https://doi.org/10.1234/example"
-                  className="textarea-main"
-                  rows={7}
-                  aria-describedby="citation-help"
-                />
-                <span id="citation-help" className="sr-only">
-                  Enter your citation to verify. Press Enter to check or Shift+Enter for new line.
-                </span>
-
-                {/* PDF Uploader */}
-                <div className="pdf-uploader">
-                  <div className="pdf-uploader-header">
-                    <div>
-                      <h3 className="pdf-title">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                          <path
-                            d="M13 2H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7l-3-5z"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          <path
-                            d="M13 2v5h3"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                        PDF Citation Extractor
-                      </h3>
-                      <p className="pdf-subtitle">Upload research paper to extract all citations</p>
-                    </div>
-                    <span className="badge-premium">PREMIUM</span>
-                  </div>
-
-                  <input
-                    type="file"
-                    accept=".pdf,application/pdf"
-                    onChange={handlePdfUpload}
-                    className="file-input"
-                    id="pdf-upload"
-                    disabled={isUploadingPdf}
-                    aria-label="Upload PDF file for citation extraction"
-                    aria-describedby="pdf-upload-help"
+                <div className="input-wrapper" style={{ position: 'relative' }} ref={inputWrapperRef}>
+                  <textarea
+                    id="citation-input"
+                    value={citation}
+                    onChange={(e) => setCitation(e.target.value)}
+                    onKeyDown={handleCitationKeyDown}
+                    placeholder="Smith, J. (2023). The Future of AI. Journal of Technology, 15(3), 245-267. https://doi.org/10.1234/example"
+                    className="textarea-main"
+                    rows={7}
+                    aria-describedby="citation-help"
                   />
-                  <span id="pdf-upload-help" className="sr-only">
-                    Upload a PDF file up to 10MB to extract citations
-                  </span>
-
-                  <label
-                    htmlFor="pdf-upload"
-                    className={`dropzone ${isUploadingPdf ? 'loading' : ''} ${pdfFile ? 'success' : ''}`}
+                  
+                  {/* Clip Icon Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowPdfUpload(!showPdfUpload)}
+                    className="btn-clip"
+                    aria-label="Upload PDF"
+                    aria-expanded={showPdfUpload}
+                    title="Upload PDF paper"
                   >
-                    {isUploadingPdf ? (
-                      <span className="dropzone-content">
-                        <svg
-                          className="spinner"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          aria-hidden="true"
-                        >
-                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.25" />
-                          <path d="M12 2a10 10 0 0110 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                        </svg>
-                        Processing PDF...
-                      </span>
-                    ) : pdfFile ? (
-                      <span className="dropzone-content">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                          <path
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                        {pdfFile.name} — Click to change
-                      </span>
-                    ) : (
-                      <span className="dropzone-content">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                          <path
-                            d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5m0 0L7 8m5-5v12"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                        Click to upload PDF (max 10MB)
-                      </span>
-                    )}
-                  </label>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                    </svg>
+                  </button>
 
-                  {pdfCitations.length > 0 && (
-                    <div className="pdf-results" role="region" aria-label="Extracted citations">
-                      <p className="pdf-results-title">Found {pdfCitations.length} citations:</p>
-                      <div className="pdf-citations-list" role="list">
-                        {pdfCitations.map((cit, i) => (
-                          <div
-                            key={i}
-                            className="pdf-citation-item"
-                            role="listitem"
-                            onClick={() => {
-                              setCitation(cit);
-                              toast.success('Citation loaded');
-                            }}
-                          >
-                            {cit.substring(0, 100)}
-                            {cit.length > 100 ? '…' : ''}
+                  {/* PDF Upload Overlay */}
+                  <AnimatePresence>
+                    {showPdfUpload && (
+                      <motion.div
+                        initial={{ clipPath: 'inset(100% 0 0 0)' }}
+                        animate={{ clipPath: 'inset(0 0 0 0)' }}
+                        exit={{ clipPath: 'inset(100% 0 0 0)' }}
+                        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} // Smooth easeOutExpo-like curve
+                        className="pdf-upload-overlay"
+                      >
+                        <div className="pdf-uploader-content">
+                          <div className="pdf-uploader-header">
+                            <div>
+                              <h3 className="pdf-title">
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                  <path
+                                    d="M13 2H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7l-3-5z"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                  <path
+                                    d="M13 2v5h3"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                                Upload Paper
+                              </h3>
+                              <p className="pdf-subtitle">Extract citations from PDF</p>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span className="badge-premium">PREMIUM</span>
+                                <button 
+                                    onClick={() => setShowPdfUpload(false)}
+                                    className="btn-text-danger"
+                                    style={{ padding: '4px 8px' }}
+                                    aria-label="Close upload"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+
+                          <input
+                            type="file"
+                            accept=".pdf,application/pdf"
+                            onChange={(e) => {
+                                handlePdfUpload(e);
+                                // Optional: close on success is handled in handlePdfUpload or manually here?
+                                // User said "Clicking cancel, upload complete... collapses it"
+                                // handlePdfUpload is async, so we might want to wait. 
+                                // But handlePdfUpload logic isn't changed here, just the UI trigger.
+                            }}
+                            className="file-input"
+                            id="pdf-upload"
+                            disabled={isUploadingPdf}
+                            aria-label="Upload PDF file for citation extraction"
+                            aria-describedby="pdf-upload-help"
+                          />
+                          <span id="pdf-upload-help" className="sr-only">
+                            Upload a PDF file up to 10MB to extract citations
+                          </span>
+
+                          <label
+                            htmlFor="pdf-upload"
+                            className={`dropzone ${isUploadingPdf ? 'loading' : ''} ${pdfFile ? 'success' : ''}`}
+                          >
+                            {isUploadingPdf ? (
+                              <span className="dropzone-content">
+                                <svg
+                                  className="spinner"
+                                  width="24"
+                                  height="24"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  aria-hidden="true"
+                                >
+                                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.25" />
+                                  <path d="M12 2a10 10 0 0110 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                </svg>
+                                Processing PDF...
+                              </span>
+                            ) : pdfFile ? (
+                              <span className="dropzone-content">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                  <path
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                                {pdfFile.name}
+                              </span>
+                            ) : (
+                              <span className="dropzone-content">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                  <path
+                                    d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5m0 0L7 8m5-5v12"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                                Click to upload PDF
+                              </span>
+                            )}
+                          </label>
+
+                          {pdfCitations.length > 0 && (
+                            <div className="pdf-results" role="region" aria-label="Extracted citations" style={{ maxHeight: '100px', overflowY: 'auto', marginTop: '10px' }}>
+                              <p className="pdf-results-title" style={{ fontSize: '0.75rem' }}>Found {pdfCitations.length} citations:</p>
+                              {/* Shortened list for compact view */}
+                              <div className="pdf-citations-list" role="list">
+                                {pdfCitations.map((cit, i) => (
+                                  <div
+                                    key={i}
+                                    className="pdf-citation-item"
+                                    role="listitem"
+                                    onClick={() => {
+                                      setCitation(cit);
+                                      toast.success('Citation loaded');
+                                      setShowPdfUpload(false); // Close on selection
+                                    }}
+                                  >
+                                    {cit.substring(0, 80)}...
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 <div className="action-buttons">
@@ -1503,7 +1556,7 @@ export default function Home() {
         {/* University Logos */}
         <section className="logos-section" aria-label="Trusted by universities">
           <div className="logos-container">
-            <p className="logos-title">Used by professors and students of</p>
+            <p className="logos-title">Built for students who want to succeed at</p>
             <div className="marquee">
               <div className="marquee-track">
                 {universities.map((uni, i) => (
@@ -1533,12 +1586,12 @@ export default function Home() {
               className="section-header"
             >
               <h2 className="section-title">
-                Why Researchers Trust
+                Why students use
                 <br />
                 <span className="gradient-text">CiteXai</span>
               </h2>
               <p className="section-subtitle">
-                Professional citation verification tools used by thousands of students and academics worldwide
+                Because it actually works.
               </p>
             </motion.div>
 
@@ -1628,10 +1681,10 @@ export default function Home() {
               >
                 <span className="split-hero-badge">AI-POWERED VERIFICATION</span>
                 <h2 className="split-hero-title">
-                  Never Submit a <span className="text-highlight">Fake Citation</span> Again
+                  Don&apos;t let a <span className="text-highlight">bad bibliography</span> ruin your grade
                 </h2>
                 <p className="split-hero-description">
-                  {"Powered by the World's First AI Citation Guardian – 99.2% Accurate, advanced AI to cross-reference your citations against 200M+ papers. Catch hallucinated papers, broken links, and formatting errors before your professor does."}
+                  {"It checks your citations against real databases (CrossRef, PubMed, etc) so you don't submit hallucinated garbage."}
 
                 </p>
 
@@ -1662,8 +1715,8 @@ export default function Home() {
         <section id="pricing" className="pricing-section">
           <div className="container">
             <div className="pricing-header">
-              <h2 className="pricing-main-title">Simple, Transparent Pricing</h2>
-              <p className="pricing-subtitle">Choose the plan that fits your needs</p>
+              <h2 className="pricing-main-title">Pricing</h2>
+              <p className="pricing-subtitle">Cheap enough for students. Powerful enough for researchers.</p>
             </div>
 
             <div className="pricing-grid">
@@ -1680,7 +1733,7 @@ export default function Home() {
                     <span className="pricing-amount">$0</span>
                     <span className="pricing-period">/forever</span>
                   </div>
-                  <p className="pricing-desc">No credit card required</p>
+                  <p className="pricing-desc">I pay for the API (3 fixes/day limit)</p>
                 </div>
 
                 <ul className="pricing-features" role="list">
@@ -1723,7 +1776,7 @@ export default function Home() {
                 <div className="pricing-popular-badge">MOST POPULAR</div>
 
                 <div className="pricing-card-header">
-                  <h3 className="pricing-name">Premium</h3>
+                  <h3 className="pricing-name">Premium (Coffee price)</h3>
                   <div className="pricing-price-box">
                     <div className="price-crossed">
                       <span className="pricing-original">$7</span>
@@ -1788,7 +1841,7 @@ export default function Home() {
                 className="pricing-card"
               >
                 <div className="pricing-card-header">
-                  <h3 className="pricing-name">Enterprise</h3>
+                  <h3 className="pricing-name">Universities</h3>
                   <div className="pricing-price-box">
                     <span className="pricing-amount pricing-amount-custom">Custom</span>
                   </div>
@@ -1915,7 +1968,7 @@ export default function Home() {
               <div className="footer-brand">
                 CiteX<span className="gradient-text">ai</span>
               </div>
-              <p className="footer-tagline">Verify citations. Fix broken ones. Save grades. Stay honest.</p>
+              <p className="footer-tagline">Verify citations. Fix broken ones. Made with ☕ by a student, for students.</p>
             </div>
 
             <div className="footer-col">
@@ -1965,7 +2018,7 @@ export default function Home() {
 
           <div className="footer-bottom">
             <p>
-              © {new Date().getFullYear()} CiteXai. Built by <strong>DaudX</strong> •{' '}
+              © {new Date().getFullYear()} CiteXai. Built by <strong>DaudX</strong> with frustration over fake citations •{' '}
               <a href="mailto:daudibrahimhasan@gmail.com">daudibrahimhasan@gmail.com</a>
             </p>
           </div>

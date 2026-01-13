@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabase = (supabaseUrl && supabaseKey) 
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
 
 export async function POST(request) {
   try {
@@ -15,6 +17,16 @@ export async function POST(request) {
         { error: 'Email required' },
         { status: 400 }
       );
+    }
+
+    // If Supabase is not configured, return default free tier
+    if (!supabase) {
+      return NextResponse.json({
+        tier: 'free',
+        usage_count: 0,
+        limit: 25,
+        unlimited: false
+      });
     }
 
     // Get user from database

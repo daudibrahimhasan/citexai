@@ -1,3 +1,4 @@
+
 export async function POST(req) {
   try {
     const { citation } = await req.json();
@@ -18,7 +19,15 @@ export async function POST(req) {
     // TRY OPENALEX FIRST (FREE)
     // console.log('📡 Trying OpenAlex (free)...');
 
-    const searchQuery = citation.replace(/[^\w\s]/g, ' ').trim();
+    const yearMatch = citation.match(/\((\d{4})\)/);
+    const year = yearMatch ? parseInt(yearMatch[1]) : null;
+
+    // Build a cleaner search query: First Author + Title words
+    let searchQuery = citation;
+    if (firstAuthor) {
+       searchQuery = `${firstAuthor} ${citation.replace(/^[A-Z][^.]+\./, '').substring(0, 100)}`;
+    }
+    searchQuery = searchQuery.replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
 
     try {
       const openAlexResponse = await fetch(
@@ -42,19 +51,13 @@ export async function POST(req) {
           const normalize = (s) => s ? s.toLowerCase().replace(/[^\w\s]/g, '').trim() : '';
           const getWords = (s) => normalize(s).split(/\s+/).filter(w => w.length > 3);
           
-          // Extract title words from citation (filter out author, year, etc)
-          const yearMatch = citation.match(/\((\d{4})\)/);
-          const year = yearMatch ? parseInt(yearMatch[1]) : null;
-          
           // Try to extract just the title part from the citation
           let titlePart = citation;
-          // Remove author at start (e.g., "Garcia, M. (2019)." or similar)
-          titlePart = titlePart.replace(/^[A-Z][^.]+\.\s*\(\d{4}\)\.\s*/, '');
-          // Remove DOI, URL at end
+          // Handle various formats to extract title
+          titlePart = titlePart.replace(/^[A-Z][^.]+\.\s*\(\d{4}\)\.\s*/, ''); // APA style
           titlePart = titlePart.replace(/https?:\/\/[^\s]+/g, '').replace(/\s+/g, ' ').trim();
           
           const citationWords = getWords(titlePart);
-          // console.log('📝 Citation title words:', citationWords.slice(0, 10).join(', '));
 
           for (const work of data.results) {
             const workTitle = work.title || '';
@@ -63,25 +66,24 @@ export async function POST(req) {
             
             // Calculate word overlap
             const matchingWords = citationWords.filter(w => workWords.includes(w));
-            const overlap = citationWords.length > 0 ? matchingWords.length / citationWords.length : 0;
+            const overlap = (citationWords.length > 0) ? matchingWords.length / citationWords.length : 0;
             
             let score = 0;
             
-            // Title word matching (max 60 points)
-            if (overlap >= 0.7) {
+            // Title word matching (max 60 points) - Be more lenient on overlap
+            if (overlap >= 0.6) {
               score += 60;
-            } else if (overlap >= 0.5) {
+            } else if (overlap >= 0.4) {
               score += 40;
-            } else if (overlap >= 0.3) {
+            } else if (overlap >= 0.2) {
               score += 20;
             }
             
             // Author matching (max 25 points)
             if (firstAuthor && work.authorships) {
               const hasAuthor = work.authorships.some(a => {
-                const name = a.author.display_name.toLowerCase();
-                const lastName = name.split(' ').pop();
-                return lastName === firstAuthor || name.includes(firstAuthor);
+                const name = a.author?.display_name?.toLowerCase() || '';
+                return name.includes(firstAuthor);
               });
               if (hasAuthor) score += 25;
             }
@@ -98,10 +100,8 @@ export async function POST(req) {
             }
           }
           
-          // Only accept matches with score >= 50 (need good title OR author+year match)
-          if (bestMatch && bestScore >= 50) {
-            // console.log(`✅ Found OpenAlex match (score: ${bestScore}):`, bestMatch.title);
-            
+          // Accept matches with score >= 45 (relaxed slightly)
+          if (bestMatch && bestScore >= 45) {
             const work = bestMatch;
 
             // Build APA citation
@@ -109,19 +109,32 @@ export async function POST(req) {
               const name = a.author.display_name;
               const parts = name.split(' ');
               const last = parts[parts.length - 1];
-              const initials = parts.slice(0, -1).map(p => p[0] + '.').join(' ');
+              const initials = parts[0] ? parts[0][0] + '.' : '';
               return `${last}, ${initials}`;
             }) || [];
 
-            const authorText = authors.length > 3
+            const authorText = (authors.length > 3)
               ? authors.slice(0, 3).join(', ') + ', et al.'
               : authors.join(', ') || 'Unknown';
 
             const doi = work.doi?.replace('https://doi.org/', '') || '';
             const venue = work.primary_location?.source?.display_name || 'Unknown';
-            const year = work.publication_year || 'n.d.';
+            const pubYear = work.publication_year || 'n.d.';
 
-            const apa = `${authorText} (${year}). ${work.title}. ${venue}${doi ? `. https://doi.org/${doi}` : ''}.`;
+            let apa = `${authorText} (${pubYear}). ${work.title}. ${venue}${doi ? `. https://doi.org/${doi}` : ''}.`;
+
+            // NO-OP DETECTION: If the fix is functionally the same as input
+            const normInput = citation.toLowerCase().replace(/[^\w]/g, '');
+            const normApa = apa.toLowerCase().replace(/[^\w]/g, '');
+            
+            if (normInput === normApa || (normInput.includes(normApa) && citation.length - apa.length < 15)) {
+                 return Response.json({
+                   success: true,
+                   isAlreadyCorrect: true,
+                   message: 'Citation is already in a correct format.',
+                   suggestion: { suggestions: { APA: citation } }
+                 });
+            }
 
             return Response.json({
               success: true,
@@ -130,7 +143,7 @@ export async function POST(req) {
                 metadata: {
                   title: work.title,
                   authors: authors,
-                  year: year,
+                  year: pubYear,
                   journal: venue,
                   doi: doi
                 }
@@ -148,6 +161,15 @@ export async function POST(req) {
     }
 
     // FALLBACK TO GROQ AI
+    // We only use AI if OpenAlex failed to find a high-confidence match.
+    // If the citation already has a year and looks structured, we might skip AI 
+    // to avoid hallucinating fixes for hallucinations, but let's be more lenient.
+    
+    // Check if it's potentially nonsensical 
+    if (citation.length < 15) {
+      return Response.json({ success: false, error: 'Input too short to fix' }, { status: 400 });
+    }
+
     const apiKey = process.env.GROQ_API_KEY;
 
     if (!apiKey) {
@@ -156,8 +178,6 @@ export async function POST(req) {
         error: 'Could not fix citation'
       }, { status: 404 });
     }
-
-    // console.log('🤖 Using Groq AI...');
 
     try {
       const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -171,41 +191,87 @@ export async function POST(req) {
           messages: [
             {
               role: 'system',
-              content: 'You are a citation expert. For famous papers like GPT-3 (Brown 2020), Transformer (Vaswani 2017), return ONLY the APA format citation. Be concise.'
+              content: 'You are a citation expert. Return ONLY the corrected APA format citation string. No explanation, no intro, no conversational filler. If the input is correct, return it as is. If it is a hallucinated/fake paper, return ONLY the word "INVALID".'
             },
             {
               role: 'user',
-              content: `Fix this citation and return ONLY APA format:\n\n"${citation}"`
+              content: `APA format for: "${citation}"`
             }
           ],
           temperature: 0.1,
-          max_tokens: 500
+          max_tokens: 200
         })
       });
 
       if (groqResponse.ok) {
         const groqData = await groqResponse.json();
-        let fixedCitation = groqData.choices[0].message.content;
+        let fixedCitation = groqData.choices[0].message.content.trim();
+        
+        if (fixedCitation.toUpperCase().includes('INVALID') || fixedCitation.length < 10) {
+           return Response.json({ success: false, error: 'Could not verify or fix this citation' }, { status: 400 });
+        }
 
-        // Extract only APA if multiple formats returned
-        const apaMatch = fixedCitation.match(/(?:APA:\s*)?(.+?)(?=\n\nMLA:|$)/s);
-        fixedCitation = apaMatch ? apaMatch[1].trim() : fixedCitation.trim();
+        // Remove any common AI conversational prefixes if they slipped through
+        fixedCitation = fixedCitation.replace(/^(Here is the citation|Proper APA format:|The corrected citation is:)\s*/i, '');
+        fixedCitation = fixedCitation.replace(/^"|"$/g, ''); // Remove quotes
 
-        // Remove "APA:" prefix if present
-        fixedCitation = fixedCitation.replace(/^APA:\s*/i, '');
-
-        // console.log('✅ Groq AI returned');
-        // console.log('   Tokens:', groqData.usage?.total_tokens);
+        // 🚀 NEW: Try to find metadata (DOI/Link) for this AI-fixed citation
+        // The AI cleaned up the text, so now OpenAlex search might actually work!
+        let metadata = null;
+        try {
+           // Extract title from fixed citation (between (Year). and .)
+           const titleMatch = fixedCitation.match(/\(\d{4}\)\.\s*([^.]+)\./);
+           if (titleMatch) {
+             const cleanTitle = titleMatch[1];
+             const searchRes = await fetch(
+               `https://api.openalex.org/works?search=${encodeURIComponent(cleanTitle)}&per-page=1`,
+               { headers: { 'User-Agent': 'CiteXai/1.0' } }
+             );
+             if (searchRes.ok) {
+               const searchData = await searchRes.json();
+               if (searchData.results?.[0]) {
+                 const best = searchData.results[0];
+                 // Verify it matches our fixed citation keywords
+                 const fixedWords = fixedCitation.toLowerCase().split(/\s+/);
+                 const foundWords = (best.title || '').toLowerCase().split(/\s+/);
+                 const intersection = fixedWords.filter(w => foundWords.includes(w));
+                 
+                 // If good overlap, assume it's the right paper
+                 if (intersection.length > 3) {
+                   const doi = best.doi?.replace('https://doi.org/', '');
+                   // const workId = best.id; // Unused
+                   
+                   metadata = {
+                     title: best.title,
+                     year: best.publication_year,
+                     doi: doi,
+                     url: best.doi || best.id
+                   };
+                   
+                   // Append DOI/URL if not present
+                   if (doi && !fixedCitation.includes(doi) && !fixedCitation.includes('doi.org')) {
+                     fixedCitation = fixedCitation.replace(/\.$/, '') + `. https://doi.org/${doi}`;
+                   } else if (!doi && best.primary_location?.pdf_url && !fixedCitation.includes('http')) {
+                      // Fallback to PDF URL if no DOI
+                      fixedCitation = fixedCitation.replace(/\.$/, '') + `. ${best.primary_location.pdf_url}`;
+                   }
+                 }
+               }
+             }
+           }
+        } catch (err) {
+          console.error('Metadata enrichment failed:', err);
+        }
 
         return Response.json({
           success: true,
+          isAlreadyCorrect: false, 
           suggestion: {
             suggestions: { APA: fixedCitation },
-            metadata: null
+            metadata: metadata // Return richer metadata if found
           },
-          source: 'CiteXai AI',
-          confidence: 90,
-          usage: groqData.usage
+          source: 'CiteXai AI + Verification',
+          confidence: metadata ? 95 : 70 // Boost confidence if we found the DOI
         });
       }
     } catch (e) {

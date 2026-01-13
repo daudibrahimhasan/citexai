@@ -497,25 +497,32 @@ body {
    HISTORY SIDEBAR
    ---------------------------------------------------------------------------- */
 
+.history-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 1001; /* Above navbar (1000) */
+  cursor: pointer;
+}
+
 .history-sidebar {
   position: fixed;
-  left: 0;
+  right: 0; /* Changed from left to right for standard UX */
   top: 0;
   width: 450px;
-  /* Slightly wider */
   height: 100vh;
-  padding-top: 80px;
-  background: rgba(255, 255, 255, 0.95);
-  /* Glassmorphism base */
+  padding-top: 20px; /* Reduced from 80px since it's above navbar now */
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(12px);
-  border-right: 1px solid rgba(229, 231, 235, 0.5);
-  box-shadow: 20px 0 50px rgba(0, 0, 0, 0.1);
+  border-left: 1px solid rgba(229, 231, 235, 0.5); /* Changed border-right to border-left */
+  box-shadow: -20px 0 50px rgba(0, 0, 0, 0.1);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding-left: var(--spacing-xl);
   padding-right: var(--spacing-xl);
   padding-bottom: var(--spacing-xl);
-  z-index: 900;
+  z-index: 1002; /* Above overlay */
   will-change: transform;
 }
 
@@ -3609,3 +3616,11 @@ body {
 /* ============================================================================
    END OF ADVANCED ANIMATIONS
    ============================================================================ */
+
+@media (max-width: 480px) {
+  .history-sidebar {
+    width: 100%;
+    box-shadow: none;
+    border-left: none;
+  }
+}

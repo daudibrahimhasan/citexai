@@ -1,6 +1,7 @@
 'use client';
 
 import './globals.css';
+import './components/ChatboxAdditions.css';
 import { Roboto_Flex, Roboto_Mono } from 'next/font/google';
 import { SessionProvider } from 'next-auth/react';
 

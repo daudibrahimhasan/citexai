@@ -6,10 +6,12 @@
 // ============================================================================
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabase = (supabaseUrl && supabaseKey) 
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
 
 const cache = new Map();
 const CACHE_TTL = 24 * 60 * 60 * 1000;
@@ -20,6 +22,9 @@ const CURRENT_YEAR = new Date().getFullYear();
 // ============================================================================
 
 async function trackUsage(userEmail, citation, result) {
+  // If Supabase is not configured, skip tracking
+  if (!supabase) return;
+
   try {
     await supabase.from('usage_logs').insert({
       user_email: userEmail || null,
@@ -52,12 +57,38 @@ function parseCitation(citation) {
     doi: null,
     url: null,
     isbn: null,
+    arxivId: null,
     format: null
   };
 
-  // Extract DOI
+  // Extract DOI (but skip arXiv DOIs for now - we'll use arXiv API directly)
   const doiMatch = citation.match(/\b(10\.\d{4,9}\/[-._;()/:A-Z0-9]+)\b/i);
-  if (doiMatch) parsed.doi = doiMatch[1];
+  if (doiMatch) {
+    parsed.doi = doiMatch[1];
+    // Check if this is an arXiv DOI and extract the arXiv ID
+    const arxivDoiMatch = parsed.doi.match(/10\.48550\/arXiv\.([\d.]+)/i);
+    if (arxivDoiMatch) {
+      parsed.arxivId = arxivDoiMatch[1];
+    }
+  }
+
+  // Extract arXiv ID directly - handles multiple formats:
+  // - arXiv:1706.03762 or arXiv:1706.03762v1
+  // - arXiv preprint arXiv:1706.03762
+  // - arxiv.org/abs/1706.03762
+  const arxivPatterns = [
+    /arXiv:(\d{4}\.\d{4,5}(?:v\d+)?)/i,
+    /arxiv\.org\/abs\/(\d{4}\.\d{4,5}(?:v\d+)?)/i,
+    /arXiv\s+(\d{4}\.\d{4,5}(?:v\d+)?)/i,
+  ];
+  
+  for (const pattern of arxivPatterns) {
+    const arxivMatch = citation.match(pattern);
+    if (arxivMatch && !parsed.arxivId) {
+      parsed.arxivId = arxivMatch[1];
+      break;
+    }
+  }
 
   // Extract URL
   const urlMatch = citation.match(/https?:\/\/[^\s,)]+/i);
@@ -97,8 +128,8 @@ function parseCitation(citation) {
     /^([A-Z][''][A-Z][a-z]+)\s*,/,
     // Standard single surname: Smith,
     /^([A-Z][a-z]+)\s*,/,
-    // Edge case: Single name (Plato, Aristotle)
-    /^([A-Z][a-z]+)\s+\(/
+    // Edge case: "Author Year" (no comma) e.g. "Vawani 2017"
+    /^([A-Z][a-z]+)\s+(?:19|20)\d{2}/
   ];
   
   for (const pattern of authorPatterns) {
@@ -174,10 +205,8 @@ function parseCitation(citation) {
     }
   }
   
-  // FINAL FIX: Strategy 5 - For corporate authors with periods (WHO case)
+  // Strategy 5: For corporate authors with periods (WHO case)
   if (!titleText && parsed.author) {
-    // Handle: "World Health Organization. (2021). Global tuberculosis report 2021. WHO Press."
-    // Extract everything between (year). and the next period OR " Press"
     const corporatePattern = new RegExp(
       `${escapeRegex(parsed.author)}\\.\\s*\\(${parsed.year}\\)[.,]?\\s*(.+?)(?=\\.|\\s+Press|$)`,
       'i'
@@ -185,6 +214,26 @@ function parseCitation(citation) {
     const match = citation.match(corporatePattern);
     if (match) {
       titleText = match[1].trim();
+    }
+  }
+  
+  // Strategy 6: Handle citations with "..." or "& ..." in author list (common in multi-author papers)
+  // Pattern: Author1, ... & LastAuthor (Year). Title.
+  if (!titleText && parsed.year) {
+    const ellipsisMatch = citation.match(/\.{3}\s*(?:\&|and)?\s*[A-Z][^(]+\(\d{4}\)[.,]?\s*(.+?)(?:\.|In\s|arXiv|https)/i);
+    if (ellipsisMatch) {
+      titleText = ellipsisMatch[1];
+    }
+  }
+  
+  // Strategy 7: Generic fallback - find text between (year). and next sentence boundary
+  if (!titleText && parsed.year) {
+    const genericMatch = citation.match(new RegExp(
+      `\\(${parsed.year}\\)[.,]?\\s*([^.]{10,150})\\.`,
+      'i'
+    ));
+    if (genericMatch) {
+      titleText = genericMatch[1];
     }
   }
 
@@ -219,8 +268,18 @@ function parseCitation(citation) {
   }
 
   // Detect format
-  const hasPublisher = citation.match(/(?:Addison-Wesley|Springer|Wiley|O'Reilly|MIT Press|Cambridge University Press|Oxford University Press|Pearson|McGraw-Hill|Academic Press|Prentice Hall|Elsevier)/i);
-  parsed.format = hasPublisher ? 'Book' : 'Article';
+  // Detect format
+  const bookKeywords = [
+    'Addison-Wesley', 'Springer', 'Wiley', 'O\'Reilly', 'MIT Press', 'Cambridge University Press', 
+    'Oxford University Press', 'Pearson', 'McGraw-Hill', 'Academic Press', 'Prentice Hall', 'Elsevier',
+    'Routledge', 'Sage', 'Penguin', 'HarperCollins', 'Simon & Schuster', 'Harvard University Press',
+    'Yale University Press', 'Princeton University Press', 'University of Chicago Press', 'CRC Press'
+  ];
+  
+  const hasPublisher = new RegExp(`(?:${bookKeywords.join('|')})`, 'i').test(citation);
+  const hasBookTitle = parsed.title && /^(Handbook|Guide|Introduction|Principles|Foundations|Fundamentals|The Art of|Understanding)\b/i.test(parsed.title);
+  
+  parsed.format = (hasPublisher || hasBookTitle || parsed.isbn) ? 'Book' : 'Article';
 
   return parsed;
 }
@@ -263,8 +322,25 @@ function isIncomplete(parsed) {
     return true;
   }
   
-  const essentialCount = [hasAuthor, hasYear, hasTitle].filter(Boolean).length;
-  return essentialCount < 2;
+  // Rejection Logic - but NOT if we have a messy strong signal
+  
+  // Allow if we have ANY two strong signals:
+  // 1. Author (>2 chars)
+  // 2. Year (valid)
+  // 3. Title (>10 chars)
+  
+  const strongSignals = [
+    hasAuthor, 
+    hasYear, 
+    hasTitle && parsed.title.length > 5
+  ].filter(Boolean).length;
+
+  if (strongSignals >= 2) return false;
+
+  // Special case: Allow Author + partial title (missing year) if title is long unique
+  if (hasAuthor && hasTitle && parsed.title.length > 20) return false;
+
+  return true;
 }
 
 function isFake(parsed) {
@@ -585,6 +661,93 @@ async function searchGoogleBooks(parsed) {
   return null;
 }
 
+// NEW: arXiv API Search
+async function searchArxiv(parsed) {
+  // Only search arXiv if we have an arXiv ID or a title
+  if (!parsed.arxivId && !parsed.title) return null;
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
+    let url;
+    if (parsed.arxivId) {
+      // Direct arXiv ID lookup
+      url = `https://export.arxiv.org/api/query?id_list=${parsed.arxivId}&max_results=1`;
+    } else {
+      // Search by title
+      const query = parsed.title.replace(/[^\w\s]/g, ' ').substring(0, 100);
+      url = `https://export.arxiv.org/api/query?search_query=ti:${encodeURIComponent(query)}&max_results=10`;
+    }
+    
+    // console.log('🔍 arXiv query:', url);
+    
+    const response = await fetch(url, { 
+      signal: controller.signal,
+      headers: { 'User-Agent': 'CiteXai/1.0' }
+    });
+    
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const xmlText = await response.text();
+      
+      // Parse XML response (simple regex-based parsing for arXiv)
+      const entries = xmlText.split('<entry>').slice(1);
+      
+      if (entries.length > 0) {
+        let bestMatch = null;
+        let bestScore = 0;
+        
+        for (const entry of entries) {
+          const titleMatch = entry.match(/<title[^>]*>([^<]+)<\/title>/);
+          const authorsMatch = entry.matchAll(/<name>([^<]+)<\/name>/g);
+          const publishedMatch = entry.match(/<published>(\d{4})/);
+          const idMatch = entry.match(/<id>([^<]+)<\/id>/);
+          const arxivIdMatch = idMatch?.[1]?.match(/(\d{4}\.\d{4,5})/);
+          
+          const authors = [];
+          for (const m of authorsMatch) {
+            authors.push(m[1]);
+          }
+          
+          const work = {
+            title: titleMatch?.[1]?.replace(/\s+/g, ' ').trim(),
+            authors: authors,
+            year: publishedMatch ? parseInt(publishedMatch[1]) : null,
+            journal: 'arXiv preprint',
+            arxivId: arxivIdMatch?.[1],
+            doi: arxivIdMatch ? `10.48550/arXiv.${arxivIdMatch[1]}` : null,
+            source: 'arXiv'
+          };
+          
+          const score = calculateMatchScore(parsed, work);
+          
+          // Boost score for direct arXiv ID match
+          const finalScore = (parsed.arxivId && work.arxivId === parsed.arxivId) ? 100 : score;
+          
+          if (finalScore > bestScore) {
+            bestScore = finalScore;
+            bestMatch = {
+              ...work,
+              relevanceScore: finalScore,
+              citationCount: 0
+            };
+          }
+        }
+        
+        if (bestMatch && bestScore >= 30) {
+          // console.log(`✅ arXiv best: ${bestScore}/100 - "${bestMatch.title?.substring(0, 60)}"`);
+          return bestMatch;
+        }
+      }
+    }
+  } catch (e) {
+    console.error('arXiv error:', e.message);
+  }
+  return null;
+}
+
 // ============================================================================
 // PRODUCTION-GRADE MATCH SCORING (PREVENTS FALSE POSITIVES)
 // ============================================================================
@@ -594,267 +757,105 @@ function calculateMatchScore(parsed, work) {
   let details = [];
   let penalties = 0;
   
-  // CRITICAL: If citation has DOI but work has DIFFERENT DOI
+  // 1. DOI MATCHING (Priority)
   if (parsed.doi && work.doi) {
     const normalizedInput = normalizeText(parsed.doi);
     const normalizedWork = normalizeText(work.doi);
-    
-    if (normalizedInput === normalizedWork) {
-      score += 95;
-      details.push('✅ DOI EXACT MATCH (+95)');
-      // console.log(`  [${work.source}] DOI MATCH - Auto-verified (95/100)`);
-      // console.log(`  [${work.source}] DOI MATCH - Auto-verified (95/100)`);
-      return Math.min(score, 100);
-    } else {
-      // IGNORE mismatch if it's an arXiv DOI (preprint vs published version often differs)
-      if (normalizedInput.includes('arxiv')) {
-        details.push('ℹ️ ArXiv DOI mismatch ignored');
-      } else {
-        // Only apply penalty for non-arXiv mismatches
-        penalties += 25;
-        details.push('⚠️ DOI mismatch with found work (-25)');
-      }
-    }
+    if (normalizedInput === normalizedWork) return 100;
   }
   
-  // ULTRA STRICT TITLE MATCHING (55 points max)
-  if (parsed.title && work.title) {
-    const inputTitle = normalizeText(parsed.title);
-    const workTitle = normalizeText(work.title);
-    
-    if (inputTitle === workTitle) {
-      score += 55;
-      details.push('✅ Title EXACT (+55)');
-    }
-    else if (inputTitle.length >= 20 && workTitle.length >= 20 && 
-             (workTitle.includes(inputTitle) || inputTitle.includes(workTitle))) {
-      score += 50;
-      details.push('✅ Title substring (+50)');
-    }
-    else {
-      // Filter out only very common filler words for SCORING (be strict here)
-      const genericWords = [
-         'using', 'based', 'approach', 'study', 'review', 'method', 'methods', 'towards', 'toward',
-         'language', 'models', 'model', 'learning', 'neural', 'network', 'networks', 
-         'deep', 'large', 'analysis', 'artificial', 'intelligence', 'data'
-      ];
-      
-      const inputWords = inputTitle.split(/\s+/).filter(w => w.length > 3 && !genericWords.includes(w));
-      const workWords = workTitle.split(/\s+/).filter(w => w.length > 3 && !genericWords.includes(w));
-      
-      // Also need some matching on specific words
-      const inputWordsAll = inputTitle.split(/\s+/).filter(w => w.length > 3);
-      const workWordsAll = workTitle.split(/\s+/).filter(w => w.length > 3);
-      const allMatches = inputWordsAll.filter(w => workWordsAll.includes(w)).length;
-      
-      if (inputWords.length > 0 && workWords.length > 0) {
-        const matches = inputWords.filter(w => workWords.includes(w)).length;
-        const minWords = Math.min(inputWords.length, workWords.length);
-        
-        // CRITICAL: Reject if only 1-2 non-generic words match
-        if (inputWords.length <= 2 && matches < inputWords.length) {
-          details.push(`❌ Title too short: ${matches}/${inputWords.length} non-generic words (0)`);
-          penalties += 40;
-        }
-        // Must have at least 3 matching non-generic words OR 70%+ overlap
-        else if (matches < 3 && (matches / minWords) < 0.7) {
-          details.push(`❌ Title weak: ${matches}/${minWords} non-generic words (0)`);
-          penalties += 30;
-        } else {
-          const overlap = matches / minWords;
-          
-          if (overlap >= 0.9) {
-            score += 50;
-            details.push(`✅ Title 90%+ (${matches}/${minWords}) (+50)`);
-          } else if (overlap >= 0.75) {
-            score += 40;
-            details.push(`✅ Title 75%+ (${matches}/${minWords}) (+40)`);
-          } else if (overlap >= 0.6) {
-            score += 30;
-            details.push(`⚠️ Title 60%+ (${matches}/${minWords}) (+30)`);
-          } else if (overlap >= 0.5) {
-            score += 15;
-            details.push(`⚠️ Title 50%+ (${matches}/${minWords}) (+15)`);
-          } else {
-            details.push(`❌ Title <50% (0)`);
-          }
-        }
-      } else if (allMatches > 0) {
-        // Only generic words matched - very weak
-        details.push(`⚠️ Only generic words matched (${allMatches}), weak evidence`);
-        penalties += 20;
-      }
-    }
-  } else {
-    penalties += 15;
-  }
-
-  // CITATION COUNT BOOST (20 points max)
-  if (work.citationCount > 0) {
-      if (work.citationCount > 1000) {
-          score += 20;
-          details.push(`🔥 Highly Cited (>1000) (+20)`);
-      } else if (work.citationCount > 100) {
-          score += 10;
-          details.push(`📚 Cited (>100) (+10)`);
-      } else if (work.citationCount > 10) {
-          score += 5;
-          details.push(`cited (+5)`);
-      }
-  }
-  
-  // AUTHOR MATCHING (30 points max)
+  // 2. AUTHOR MATCHING (Ultra Strict)
+  let authorMatched = false;
+  let partialAuthorMatched = false;
   if (parsed.author && work.authors?.length > 0) {
     const inputAuthor = normalizeText(parsed.author);
-    const inputWords = inputAuthor.split(/\s+/).filter(w => w.length >= 3);
-    
-    let authorMatched = false;
-    let authorScore = 0;
+    const inputSurname = inputAuthor.split(' ')[0]; // Usually "Smith" from "Smith, J."
     
     for (let i = 0; i < Math.min(work.authors.length, 10); i++) {
       const workAuthor = normalizeText(work.authors[i]);
+      // Check if surname is present in the work author string (handles "Ian Goodfellow" and "Goodfellow, Ian")
+      const workParts = workAuthor.split(' ');
       
-      if (inputWords.some(w => workAuthor.includes(w)) || workAuthor.includes(inputAuthor)) {
-        authorMatched = true;
-        authorScore = 30; // Match found
-        break;
-      }
-    }
-    
-    if (authorMatched) {
-      score += authorScore;
-      details.push('✅ Author match (+30)');
-    } else {
-      // PENALTY: Citation provided author but NONE of the work authors matched
-      // This detects "Smith (2017) Attention Is All You Need" vs "Vaswani..."
-      penalties += 40;
-      details.push('❌ Author mismatch (-40)');
-    }
-  } else if (parsed.author && (!work.authors || work.authors.length === 0)) {
-     // PENALTY: Citation has author, but work has NO authors listed (bad metadata or fake match)
-     penalties += 30;
-     details.push('⚠️ Work has no authors listed (-30)');
-  }
-  
-  // YEAR MATCHING (30 points max)
-  if (parsed.year && work.year) {
-    const diff = Math.abs(parsed.year - work.year);
-    if (diff === 0) {
-      score += 30;
-      details.push('✅ Year exact (+30)');
-    } else if (diff <= 1) {
-      score += 15;
-      details.push('⚠️ Year +/- 1 (+15)');
-    } else if (diff <= 2) {
-      score += 5;
-      details.push('⚠️ Year +/- 2 (+5)');
-    } else {
-      // GRADUATED PENALTY for year mismatch
-      if (diff <= 5) {
-          penalties += 10;
-          details.push(`⚠️ Year mismatch small (${parsed.year} vs ${work.year}) (-10)`);
-      } else if (diff <= 10) {
-          penalties += 20;
-          details.push(`❌ Year mismatch medium (${parsed.year} vs ${work.year}) (-20)`);
-      } else {
-          penalties += 50;
-          details.push(`❌ Year mismatch huge (${parsed.year} vs ${work.year}) (-50)`);
+      if (workParts.includes(inputSurname) || workAuthor.includes(inputSurname)) {
+         authorMatched = true;
+         break;
       }
     }
   }
-  
-  // ULTRA STRICT TITLE MATCHING (55 points max)
+
+  if (authorMatched) {
+    score += 40;
+    details.push('✅ Author match (+40)');
+  } else if (partialAuthorMatched) {
+    score += 10;
+    penalties += 20;
+    details.push('⚠️ Author initial mismatch (-20)');
+  } else if (parsed.author) {
+    penalties += 50; // Heavy penalty for wrong author
+    details.push('❌ Author mismatch (-50)');
+  }
+
+  // 3. TITLE MATCHING
   if (parsed.title && work.title) {
     const inputTitle = normalizeText(parsed.title);
     const workTitle = normalizeText(work.title);
     
     if (inputTitle === workTitle) {
-      score += 55;
-      details.push('✅ Title EXACT (+55)');
-    }
-    else if (inputTitle.length >= 20 && workTitle.length >= 20 && 
-             (workTitle.includes(inputTitle) || inputTitle.includes(workTitle))) {
+      score += 60;
+      details.push('✅ Title EXACT (+60)');
+    } else if (inputTitle.length >= 20 && (workTitle.includes(inputTitle) || inputTitle.includes(workTitle))) {
       score += 50;
       details.push('✅ Title substring (+50)');
-    }
-    else {
-      // Filter out only very common filler words for SCORING (be strict here)
-      const genericWords = [
-         'using', 'based', 'approach', 'study', 'review', 'method', 'methods', 'towards', 'toward',
-         'language', 'models', 'model', 'learning', 'neural', 'network', 'networks', 
-         'deep', 'large', 'analysis', 'artificial', 'intelligence', 'data'
-      ];
-      
+    } else {
+      const genericWords = ['using', 'based', 'approach', 'study', 'review', 'method', 'methods', 'towards', 'toward', 'language', 'models', 'model', 'learning', 'neural', 'network', 'networks', 'deep', 'large', 'analysis', 'artificial', 'intelligence', 'data', 'impact', 'effect', 'role'];
       const inputWords = inputTitle.split(/\s+/).filter(w => w.length > 3 && !genericWords.includes(w));
       const workWords = workTitle.split(/\s+/).filter(w => w.length > 3 && !genericWords.includes(w));
       
-      // Also need some matching on specific words
-      const inputWordsAll = inputTitle.split(/\s+/).filter(w => w.length > 3);
-      const workWordsAll = workTitle.split(/\s+/).filter(w => w.length > 3);
-      const allMatches = inputWordsAll.filter(w => workWordsAll.includes(w)).length;
-      
-      if (inputWords.length > 0 && workWords.length > 0) {
-        const matches = inputWords.filter(w => workWords.includes(w)).length;
-        const minWords = Math.min(inputWords.length, workWords.length);
-        
-        // CRITICAL: Reject if only 1-2 non-generic words match
-        if (inputWords.length <= 2 && matches < inputWords.length) {
-          details.push(`❌ Title too short: ${matches}/${inputWords.length} non-generic words (0)`);
-          penalties += 40;
-        }
-        // Must have at least 3 matching non-generic words OR 70%+ overlap
-        else if (matches < 3 && (matches / minWords) < 0.7) {
-          details.push(`❌ Title weak: ${matches}/${minWords} non-generic words (0)`);
-          penalties += 30;
-        } else {
-          const overlap = matches / minWords;
-          
-          if (overlap >= 0.9) {
-            score += 50;
-            details.push(`✅ Title 90%+ (${matches}/${minWords}) (+50)`);
-          } else if (overlap >= 0.75) {
-            score += 40;
-            details.push(`✅ Title 75%+ (${matches}/${minWords}) (+40)`);
-          } else if (overlap >= 0.6) {
-            score += 30;
-            details.push(`⚠️ Title 60%+ (${matches}/${minWords}) (+30)`);
-          } else if (overlap >= 0.5) {
-            score += 15;
-            details.push(`⚠️ Title 50%+ (${matches}/${minWords}) (+15)`);
-          } else {
-            details.push(`❌ Title <50% (0)`);
-          }
-        }
-      } else if (allMatches > 0) {
-        // Only generic words matched - very weak
-        details.push(`⚠️ Only generic words matched (${allMatches}), weak evidence`);
-        penalties += 20;
+      const isGeneric = inputTitle.match(/^(a\s+)?(study|research|survey|analysis|investigation|impact|effect|role)\s+(on|of|into|in|to)/i);
+      if (isGeneric && !authorMatched) {
+        penalties += 70; // Nuclear rejection for generic title mismatch
+        details.push('❌ Generic title mismatch (-70)');
+      }
+
+      const matches = inputWords.filter(w => workWords.includes(w)).length;
+      const minWords = Math.min(inputWords.length, workWords.length);
+      const overlap = minWords > 0 ? matches / minWords : 0;
+
+      if (overlap >= 0.8) {
+        score += 40;
+        details.push(`✅ Title overlap ${Math.round(overlap*100)}% (+40)`);
+      } else if (overlap >= 0.5) {
+        score += 20;
+        details.push(`⚠️ Title overlap ${Math.round(overlap*100)}% (+20)`);
+      } else {
+        penalties += 30;
+        details.push('❌ Title mismatch (-30)');
       }
     }
-  } else {
-    penalties += 15;
   }
-  
-  // JOURNAL MATCHING (bonus 5 points)
-  if (work.journal && parsed.journal) {
-    const inputJ = normalizeText(parsed.journal);
-    const workJ = normalizeText(work.journal);
-    
-    if (inputJ === workJ || (inputJ.length > 5 && workJ.includes(inputJ))) {
-      score += 5;
-      details.push('✅ Journal (+5)');
+
+  // 4. YEAR MATCHING
+  if (parsed.year && work.year) {
+    const diff = Math.abs(parsed.year - work.year);
+    if (diff === 0) {
+      score += 25;
+      details.push('✅ Year exact (+25)');
+    } else if (diff <= 1) {
+      score += 15;
+      details.push('⚠️ Year +/- 1 (+15)');
+    } else {
+      penalties += Math.min(60, diff * 15);
     }
   }
+
+  // 5. BONUS & REJECTION
+  if (work.citationCount > 1000) score += 10;
   
-  // Apply penalties and clamp
-  score = Math.max(0, Math.min(score - penalties, 100));
-  
-  /*
-  console.log(`  [${work.source}] Score: ${score}/100 (penalties: -${penalties})`);
-  console.log(`  ${details.join(' | ')}`);
-  */
-  
-  return score;
+  if (!authorMatched && penalties > 40) {
+     return 0; // Total rejection if author fails and title is weak
+  }
+
+  return Math.max(0, Math.min(100, score - penalties));
 }
 
 function normalizeText(text) {
@@ -889,9 +890,9 @@ export async function POST(request) {
       return Response.json(cached.data);
     }
 
-    console.log('\n' + '='.repeat(80));
-    console.log('📝 Citation:', citation);
-    console.log('='.repeat(80));
+    // console.log('\n' + '='.repeat(80));
+    // console.log('📝 Citation:', citation);
+    // console.log('='.repeat(80));
 
     const parsed = parseCitation(citation);
     console.log('🔍 Parsed:', JSON.stringify(parsed, null, 2));
@@ -939,18 +940,22 @@ export async function POST(request) {
     
     console.log('\n🔍 Searching all 3 databases...\n');
     
-    const [crossRefResult, openAlexResult, booksResult] = await Promise.all([
+    const [crossRefResult, openAlexResult, booksResult, arxivResult] = await Promise.all([
       searchCrossRef(parsed),
       searchOpenAlex(parsed),
-      parsed.format === 'Book' || parsed.isbn ? searchGoogleBooks(parsed) : null
+      parsed.format === 'Book' || parsed.isbn ? searchGoogleBooks(parsed) : null,
+      parsed.arxivId || parsed.title ? searchArxiv(parsed) : null
     ]);
     
+    /*
     console.log('\n📊 Results:');
     console.log(`  CrossRef: ${crossRefResult ? `${crossRefResult.relevanceScore}/100` : 'No match'}`);
     console.log(`  OpenAlex: ${openAlexResult ? `${openAlexResult.relevanceScore}/100` : 'No match'}`);
     console.log(`  Books: ${booksResult ? `${booksResult.relevanceScore}/100` : 'No match'}`);
+    console.log(`  arXiv: ${arxivResult ? `${arxivResult.relevanceScore}/100` : 'No match'}`);
+    */
     
-    const results = [crossRefResult, openAlexResult, booksResult].filter(Boolean);
+    const results = [crossRefResult, openAlexResult, booksResult, arxivResult].filter(Boolean);
     
     if (results.length === 0) {
       const result = {

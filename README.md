@@ -3,7 +3,7 @@
 **The AI Citation Guardian.**
 _Verify citations. Detect fake papers. Fix broken references instantly._
 
-![CiteXai Dashboard](public/images/readme/hero.png)
+![CiteXai Dashboard](public/images/readme.png)
 
 ## Overview
 

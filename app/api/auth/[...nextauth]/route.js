@@ -19,7 +19,7 @@ export const authOptions = {
     async signIn({ user }) {
       // Save or update user in Supabase
       try {
-        const { data: existingUser, error: fetchError } = await supabase
+        const { data: existingUser } = await supabase
           .from('users')
           .select('*')
           .eq('email', user.email)
@@ -29,7 +29,7 @@ export const authOptions = {
           // Update last_login
           await supabase
             .from('users')
-            .update({ 
+            .update({
               last_login: new Date().toISOString(),
               name: user.name,
               image: user.image
@@ -48,7 +48,7 @@ export const authOptions = {
               usage_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
             });
         }
-        
+
         return true;
       } catch (error) {
         console.error('Error saving user to database:', error);

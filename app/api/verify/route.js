@@ -238,6 +238,21 @@ function isIncomplete(parsed) {
   
   if (hasDOI) return false;
   
+  // Check for vague/generic titles that should be rejected
+  const vaguePatterns = [
+    /^some\s+/i,
+    /^a\s+paper/i,
+    /^paper\s+about/i,
+    /^study\s+on/i,
+    /^research\s+on/i,
+    /something/i,
+    /^the\s+\w+$/i  // Single word after "The"
+  ];
+  
+  if (parsed.title && vaguePatterns.some(p => p.test(parsed.title))) {
+    return true; // Reject vague titles
+  }
+  
   // Allow title-only if title is substantial (15+ chars) and has year
   if (!hasAuthor && hasTitle && hasYear && parsed.title.length >= 15) {
     return false;
@@ -299,7 +314,7 @@ async function searchCrossRef(parsed) {
     if (parsed.doi) {
       const doiUrl = `https://api.crossref.org/works/${encodeURIComponent(parsed.doi)}`;
       
-      console.log('🔍 CrossRef DOI query:', doiUrl);
+      // console.log('🔍 CrossRef DOI query:', doiUrl);
       
       try {
         const doiResponse = await fetch(doiUrl, {
@@ -311,7 +326,7 @@ async function searchCrossRef(parsed) {
           const doiData = await doiResponse.json();
           const work = doiData.message;
           
-          console.log('✅ CrossRef DOI EXACT MATCH:', work.title?.[0]);
+          // console.log('✅ CrossRef DOI EXACT MATCH:', work.title?.[0]);
           
           clearTimeout(timeoutId);
           return {
@@ -325,8 +340,8 @@ async function searchCrossRef(parsed) {
             source: 'CrossRef'
           };
         }
-      } catch (doiError) {
-        console.log('DOI lookup failed, falling back to text search');
+      } catch {
+        // console.log('DOI lookup failed, falling back to text search');
       }
     }
     
@@ -335,8 +350,8 @@ async function searchCrossRef(parsed) {
       const titleWords = parsed.title
         .toLowerCase()
         .split(/\s+/)
-        .filter(w => w.length > 3)
-        .slice(0, 7)
+        // Don't filter short words - CrossRef handles stop words better than we do
+        .slice(0, 12)
         .join(' ');
       if (titleWords) {
         queryParams.push(`query.title=${encodeURIComponent(titleWords)}`);
@@ -360,15 +375,13 @@ async function searchCrossRef(parsed) {
       }
     }
     
-    if (parsed.year) {
-      queryParams.push(`filter=from-pub-date:${parsed.year - 2},until-pub-date:${parsed.year + 2}`);
-    }
+    // Date filtering removed - often causes valid papers to be missed due to metadata mismatches
     
     if (queryParams.length === 0) return null;
     
     const url = `https://api.crossref.org/works?${queryParams.join('&')}&rows=30&select=DOI,title,author,published,container-title,is-referenced-by-count`;
     
-    console.log('🔍 CrossRef query:', url);
+    // console.log('🔍 CrossRef query:', url);
     
     const response = await fetch(url, {
       signal: controller.signal,
@@ -381,7 +394,7 @@ async function searchCrossRef(parsed) {
       const data = await response.json();
       
       if (data.message?.items?.length > 0) {
-        console.log(`📚 CrossRef found ${data.message.items.length} results`);
+        // console.log(`📚 CrossRef found ${data.message.items.length} results`);
         
         let bestMatch = null;
         let bestScore = 0;
@@ -396,6 +409,11 @@ async function searchCrossRef(parsed) {
             citationCount: work['is-referenced-by-count'] || 0,
             source: 'CrossRef'
           });
+          
+          
+          /*
+          console.log(`  Checking: "${work.title?.[0]?.substring(0, 40)}..." Score: ${score}`);
+          */
           
           if (score > bestScore) {
             bestScore = score;
@@ -413,13 +431,13 @@ async function searchCrossRef(parsed) {
         }
         
         if (bestMatch && bestScore >= 30) {
-          console.log(`✅ CrossRef best: ${bestScore}/100 - "${bestMatch.title?.substring(0, 60)}"`);
+          // console.log(`✅ CrossRef best: ${bestScore}/100 - "${bestMatch.title?.substring(0, 60)}"`);
           return bestMatch;
         }
       }
     }
   } catch (e) {
-    console.log('CrossRef error:', e.message);
+    console.error('CrossRef error:', e.message);
   }
   return null;
 }
@@ -447,7 +465,7 @@ async function searchOpenAlex(parsed) {
     
     const url = `https://api.openalex.org/works?search=${encodeURIComponent(query.trim())}&per-page=30`;
     
-    console.log('🔍 OpenAlex query:', query.trim());
+    // console.log('🔍 OpenAlex query:', query.trim());
     
     const response = await fetch(url, { 
       signal: controller.signal,
@@ -460,7 +478,7 @@ async function searchOpenAlex(parsed) {
       const data = await response.json();
       
       if (data.results?.length > 0) {
-        console.log(`📚 OpenAlex found ${data.results.length} results`);
+        // console.log(`📚 OpenAlex found ${data.results.length} results`);
         
         let bestMatch = null;
         let bestScore = 0;
@@ -492,13 +510,13 @@ async function searchOpenAlex(parsed) {
         }
         
         if (bestMatch && bestScore >= 30) {
-          console.log(`✅ OpenAlex best: ${bestScore}/100 - "${bestMatch.title?.substring(0, 60)}"`);
+          // console.log(`✅ OpenAlex best: ${bestScore}/100 - "${bestMatch.title?.substring(0, 60)}"`);
           return bestMatch;
         }
       }
     }
   } catch (e) {
-    console.log('OpenAlex error:', e.message);
+    console.error('OpenAlex error:', e.message);
   }
   return null;
 }
@@ -517,7 +535,7 @@ async function searchGoogleBooks(parsed) {
     
     const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=15`;
     
-    console.log('🔍 Google Books query:', query);
+    // console.log('🔍 Google Books query:', query);
     
     const response = await fetch(url, { signal: controller.signal });
     
@@ -527,7 +545,7 @@ async function searchGoogleBooks(parsed) {
       const data = await response.json();
       
       if (data.items?.length > 0) {
-        console.log(`📚 Google Books found ${data.items.length} results`);
+        // console.log(`📚 Google Books found ${data.items.length} results`);
         
         let bestMatch = null;
         let bestScore = 0;
@@ -556,13 +574,13 @@ async function searchGoogleBooks(parsed) {
         }
         
         if (bestMatch && bestScore >= 30) {
-          console.log(`✅ Google Books best: ${bestScore}/100 - "${bestMatch.title?.substring(0, 60)}"`);
+          // console.log(`✅ Google Books best: ${bestScore}/100 - "${bestMatch.title?.substring(0, 60)}"`);
           return bestMatch;
         }
       }
     }
   } catch (e) {
-    console.log('Google Books error:', e.message);
+    console.error('Google Books error:', e.message);
   }
   return null;
 }
@@ -576,7 +594,7 @@ function calculateMatchScore(parsed, work) {
   let details = [];
   let penalties = 0;
   
-  // DOI EXACT MATCH (auto-win: 95 points) - PRIORITIZE THIS
+  // CRITICAL: If citation has DOI but work has DIFFERENT DOI
   if (parsed.doi && work.doi) {
     const normalizedInput = normalizeText(parsed.doi);
     const normalizedWork = normalizeText(work.doi);
@@ -584,68 +602,18 @@ function calculateMatchScore(parsed, work) {
     if (normalizedInput === normalizedWork) {
       score += 95;
       details.push('✅ DOI EXACT MATCH (+95)');
-      console.log(`  [${work.source}] DOI MATCH - Auto-verified (95/100)`);
+      // console.log(`  [${work.source}] DOI MATCH - Auto-verified (95/100)`);
+      // console.log(`  [${work.source}] DOI MATCH - Auto-verified (95/100)`);
       return Math.min(score, 100);
-    }
-  }
-  
-  // AUTHOR MATCHING (30 points max)
-  if (parsed.author && work.authors?.length > 0) {
-    const inputAuthor = normalizeText(parsed.author);
-    const inputWords = inputAuthor.split(/\s+/).filter(w => w.length >= 3);
-    
-    let authorMatched = false;
-    let authorScore = 0;
-    
-    for (let i = 0; i < Math.min(work.authors.length, 10); i++) {
-      const workAuthor = normalizeText(work.authors[i]);
-      const workWords = workAuthor.split(/\s+/).filter(w => w.length >= 3);
-      
-      let wordMatched = false;
-      
-      for (const inputWord of inputWords) {
-        for (const workWord of workWords) {
-          if (inputWord === workWord || 
-              (inputWord.length >= 4 && workWord.length >= 4 && 
-               (workWord.startsWith(inputWord) || inputWord.startsWith(workWord)))) {
-            wordMatched = true;
-            break;
-          }
-        }
-        if (wordMatched) break;
-      }
-      
-      if (wordMatched) {
-        authorScore = (i === 0) ? 30 : 20;
-        details.push(`✅ Author "${work.authors[i]}" ≈ "${parsed.author}" (+${authorScore})`);
-        authorMatched = true;
-        break;
-      }
-    }
-    
-    if (!authorMatched) {
-      details.push(`❌ No author match (0)`);
-      penalties += 20;
     } else {
-      score += authorScore;
-    }
-  }
-  
-  // YEAR MATCHING (15 points max)
-  if (parsed.year && work.year) {
-    const yearDiff = Math.abs(parsed.year - work.year);
-    
-    if (yearDiff === 0) {
-      score += 15;
-      details.push('✅ Year exact (+15)');
-    } else if (yearDiff === 1) {
-      score += 10;
-      details.push('⚠️ Year ±1 (+10)');
-    } else if (yearDiff <= 2) {
-      score += 5;
-      details.push(`⚠️ Year ±${yearDiff} (+5)`);
-    } else {
-      details.push(`❌ Year ±${yearDiff} (0)`);
+      // IGNORE mismatch if it's an arXiv DOI (preprint vs published version often differs)
+      if (normalizedInput.includes('arxiv')) {
+        details.push('ℹ️ ArXiv DOI mismatch ignored');
+      } else {
+        // Only apply penalty for non-arXiv mismatches
+        penalties += 25;
+        details.push('⚠️ DOI mismatch with found work (-25)');
+      }
     }
   }
   
@@ -664,21 +632,33 @@ function calculateMatchScore(parsed, work) {
       details.push('✅ Title substring (+50)');
     }
     else {
-      const inputWords = inputTitle.split(/\s+/).filter(w => w.length > 3);
-      const workWords = workTitle.split(/\s+/).filter(w => w.length > 3);
+      // Filter out only very common filler words for SCORING (be strict here)
+      const genericWords = [
+         'using', 'based', 'approach', 'study', 'review', 'method', 'methods', 'towards', 'toward',
+         'language', 'models', 'model', 'learning', 'neural', 'network', 'networks', 
+         'deep', 'large', 'analysis', 'artificial', 'intelligence', 'data'
+      ];
+      
+      const inputWords = inputTitle.split(/\s+/).filter(w => w.length > 3 && !genericWords.includes(w));
+      const workWords = workTitle.split(/\s+/).filter(w => w.length > 3 && !genericWords.includes(w));
+      
+      // Also need some matching on specific words
+      const inputWordsAll = inputTitle.split(/\s+/).filter(w => w.length > 3);
+      const workWordsAll = workTitle.split(/\s+/).filter(w => w.length > 3);
+      const allMatches = inputWordsAll.filter(w => workWordsAll.includes(w)).length;
       
       if (inputWords.length > 0 && workWords.length > 0) {
         const matches = inputWords.filter(w => workWords.includes(w)).length;
         const minWords = Math.min(inputWords.length, workWords.length);
         
-        // CRITICAL: Reject if only 1 word and it's less than 50% match
+        // CRITICAL: Reject if only 1-2 non-generic words match
         if (inputWords.length <= 2 && matches < inputWords.length) {
-          details.push(`❌ Title too short: ${matches}/${inputWords.length} (0)`);
+          details.push(`❌ Title too short: ${matches}/${inputWords.length} non-generic words (0)`);
           penalties += 40;
         }
-        // Must have at least 3 matching words OR 70%+ overlap
+        // Must have at least 3 matching non-generic words OR 70%+ overlap
         else if (matches < 3 && (matches / minWords) < 0.7) {
-          details.push(`❌ Title weak: ${matches}/${minWords} words (0)`);
+          details.push(`❌ Title weak: ${matches}/${minWords} non-generic words (0)`);
           penalties += 30;
         } else {
           const overlap = matches / minWords;
@@ -699,6 +679,156 @@ function calculateMatchScore(parsed, work) {
             details.push(`❌ Title <50% (0)`);
           }
         }
+      } else if (allMatches > 0) {
+        // Only generic words matched - very weak
+        details.push(`⚠️ Only generic words matched (${allMatches}), weak evidence`);
+        penalties += 20;
+      }
+    }
+  } else {
+    penalties += 15;
+  }
+
+  // CITATION COUNT BOOST (20 points max)
+  if (work.citationCount > 0) {
+      if (work.citationCount > 1000) {
+          score += 20;
+          details.push(`🔥 Highly Cited (>1000) (+20)`);
+      } else if (work.citationCount > 100) {
+          score += 10;
+          details.push(`📚 Cited (>100) (+10)`);
+      } else if (work.citationCount > 10) {
+          score += 5;
+          details.push(`cited (+5)`);
+      }
+  }
+  
+  // AUTHOR MATCHING (30 points max)
+  if (parsed.author && work.authors?.length > 0) {
+    const inputAuthor = normalizeText(parsed.author);
+    const inputWords = inputAuthor.split(/\s+/).filter(w => w.length >= 3);
+    
+    let authorMatched = false;
+    let authorScore = 0;
+    
+    for (let i = 0; i < Math.min(work.authors.length, 10); i++) {
+      const workAuthor = normalizeText(work.authors[i]);
+      
+      if (inputWords.some(w => workAuthor.includes(w)) || workAuthor.includes(inputAuthor)) {
+        authorMatched = true;
+        authorScore = 30; // Match found
+        break;
+      }
+    }
+    
+    if (authorMatched) {
+      score += authorScore;
+      details.push('✅ Author match (+30)');
+    } else {
+      // PENALTY: Citation provided author but NONE of the work authors matched
+      // This detects "Smith (2017) Attention Is All You Need" vs "Vaswani..."
+      penalties += 40;
+      details.push('❌ Author mismatch (-40)');
+    }
+  } else if (parsed.author && (!work.authors || work.authors.length === 0)) {
+     // PENALTY: Citation has author, but work has NO authors listed (bad metadata or fake match)
+     penalties += 30;
+     details.push('⚠️ Work has no authors listed (-30)');
+  }
+  
+  // YEAR MATCHING (30 points max)
+  if (parsed.year && work.year) {
+    const diff = Math.abs(parsed.year - work.year);
+    if (diff === 0) {
+      score += 30;
+      details.push('✅ Year exact (+30)');
+    } else if (diff <= 1) {
+      score += 15;
+      details.push('⚠️ Year +/- 1 (+15)');
+    } else if (diff <= 2) {
+      score += 5;
+      details.push('⚠️ Year +/- 2 (+5)');
+    } else {
+      // GRADUATED PENALTY for year mismatch
+      if (diff <= 5) {
+          penalties += 10;
+          details.push(`⚠️ Year mismatch small (${parsed.year} vs ${work.year}) (-10)`);
+      } else if (diff <= 10) {
+          penalties += 20;
+          details.push(`❌ Year mismatch medium (${parsed.year} vs ${work.year}) (-20)`);
+      } else {
+          penalties += 50;
+          details.push(`❌ Year mismatch huge (${parsed.year} vs ${work.year}) (-50)`);
+      }
+    }
+  }
+  
+  // ULTRA STRICT TITLE MATCHING (55 points max)
+  if (parsed.title && work.title) {
+    const inputTitle = normalizeText(parsed.title);
+    const workTitle = normalizeText(work.title);
+    
+    if (inputTitle === workTitle) {
+      score += 55;
+      details.push('✅ Title EXACT (+55)');
+    }
+    else if (inputTitle.length >= 20 && workTitle.length >= 20 && 
+             (workTitle.includes(inputTitle) || inputTitle.includes(workTitle))) {
+      score += 50;
+      details.push('✅ Title substring (+50)');
+    }
+    else {
+      // Filter out only very common filler words for SCORING (be strict here)
+      const genericWords = [
+         'using', 'based', 'approach', 'study', 'review', 'method', 'methods', 'towards', 'toward',
+         'language', 'models', 'model', 'learning', 'neural', 'network', 'networks', 
+         'deep', 'large', 'analysis', 'artificial', 'intelligence', 'data'
+      ];
+      
+      const inputWords = inputTitle.split(/\s+/).filter(w => w.length > 3 && !genericWords.includes(w));
+      const workWords = workTitle.split(/\s+/).filter(w => w.length > 3 && !genericWords.includes(w));
+      
+      // Also need some matching on specific words
+      const inputWordsAll = inputTitle.split(/\s+/).filter(w => w.length > 3);
+      const workWordsAll = workTitle.split(/\s+/).filter(w => w.length > 3);
+      const allMatches = inputWordsAll.filter(w => workWordsAll.includes(w)).length;
+      
+      if (inputWords.length > 0 && workWords.length > 0) {
+        const matches = inputWords.filter(w => workWords.includes(w)).length;
+        const minWords = Math.min(inputWords.length, workWords.length);
+        
+        // CRITICAL: Reject if only 1-2 non-generic words match
+        if (inputWords.length <= 2 && matches < inputWords.length) {
+          details.push(`❌ Title too short: ${matches}/${inputWords.length} non-generic words (0)`);
+          penalties += 40;
+        }
+        // Must have at least 3 matching non-generic words OR 70%+ overlap
+        else if (matches < 3 && (matches / minWords) < 0.7) {
+          details.push(`❌ Title weak: ${matches}/${minWords} non-generic words (0)`);
+          penalties += 30;
+        } else {
+          const overlap = matches / minWords;
+          
+          if (overlap >= 0.9) {
+            score += 50;
+            details.push(`✅ Title 90%+ (${matches}/${minWords}) (+50)`);
+          } else if (overlap >= 0.75) {
+            score += 40;
+            details.push(`✅ Title 75%+ (${matches}/${minWords}) (+40)`);
+          } else if (overlap >= 0.6) {
+            score += 30;
+            details.push(`⚠️ Title 60%+ (${matches}/${minWords}) (+30)`);
+          } else if (overlap >= 0.5) {
+            score += 15;
+            details.push(`⚠️ Title 50%+ (${matches}/${minWords}) (+15)`);
+          } else {
+            details.push(`❌ Title <50% (0)`);
+          }
+        }
+      } else if (allMatches > 0) {
+        // Only generic words matched - very weak
+        details.push(`⚠️ Only generic words matched (${allMatches}), weak evidence`);
+        penalties += 20;
       }
     }
   } else {
@@ -719,8 +849,10 @@ function calculateMatchScore(parsed, work) {
   // Apply penalties and clamp
   score = Math.max(0, Math.min(score - penalties, 100));
   
+  /*
   console.log(`  [${work.source}] Score: ${score}/100 (penalties: -${penalties})`);
   console.log(`  ${details.join(' | ')}`);
+  */
   
   return score;
 }
@@ -740,9 +872,12 @@ function normalizeText(text) {
 
 export async function POST(request) {
   try {
-    const { citation, userEmail } = await request.json();
+    const { userEmail, citation: rawCitation } = await request.json();
     
-    if (!citation || !citation.trim()) {
+    // Clean input
+    const citation = rawCitation.trim().replace(/^["']|["']$/g, '');
+    
+    if (!citation || citation.length < 10) {
       return Response.json({ 
         error: 'Citation cannot be empty' 
       }, { status: 400 });
@@ -760,6 +895,7 @@ export async function POST(request) {
 
     const parsed = parseCitation(citation);
     console.log('🔍 Parsed:', JSON.stringify(parsed, null, 2));
+    // console.log('[DEBUG] Parsed Citation:', JSON.stringify(parsed));
     
     if (isIncomplete(parsed)) {
       const result = {
@@ -867,16 +1003,16 @@ export async function POST(request) {
     // FIXED THRESHOLDS
     if (score >= 70) {
       status = 'verified';
-      message = `✅ VERIFIED - Found in ${bestMatch.source} (${score}%)`;
+      message = `VERIFIED - Found in ${bestMatch.source} (${score}%)`;
     } else if (score >= 50) {
       status = 'likely';
-      message = `⚠️ LIKELY REAL - Partial match in ${bestMatch.source} (${score}%)`;
+      message = `LIKELY REAL - Partial match in ${bestMatch.source} (${score}%)`;
     } else if (score >= 30) {
       status = 'uncertain';
-      message = `❓ UNCERTAIN - Weak match in ${bestMatch.source} (${score}%)`;
+      message = `UNCERTAIN - Weak match in ${bestMatch.source} (${score}%)`;
     } else {
       status = 'not_verified';
-      message = `❌ NOT VERIFIED - Could not confirm (${score}%)`;
+      message = `NOT VERIFIED - Could not confirm (${score}%)`;
     }
 
     const result = {

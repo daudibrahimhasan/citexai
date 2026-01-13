@@ -78,7 +78,7 @@ export default function TermsOfService() {
           <section className="legal-section">
             <h2 className="legal-section-heading">Liability Disclaimer</h2>
             <span className="legal-highlight">
-              USE CITEXAI AT YOUR OWN RISK. WE PROVIDE THE SERVICE "AS IS" WITHOUT WARRANTIES. 
+              USE CITEXAI AT YOUR OWN RISK. WE PROVIDE THE SERVICE `&quot;AS IS&quot;` WITHOUT WARRANTIES. 
               WE ARE NOT LIABLE FOR ACADEMIC PENALTIES OR OTHER CONSEQUENCES.
             </span>
           </section>

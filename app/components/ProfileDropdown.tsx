@@ -1,8 +1,9 @@
 import { signOut } from 'next-auth/react';
+import type { Session } from 'next-auth';
 import { LogOut, User, Crown } from 'lucide-react';
 
 interface ProfileDropdownProps {
-  session: any;
+  session: Session | null;
   userUsage: {
     usage_count: number;
     limit: number;
@@ -23,9 +24,9 @@ export default function ProfileDropdown({
   const remainingRequests = usageLimit - usageCount;
   const isPremium = usageLimit > 25;
 
-  const userInitial = session.user?.name?.[0]?.toUpperCase() || 
-                      session.user?.email?.[0]?.toUpperCase() || 
-                      'U';
+  const userInitial = session?.user?.name?.[0]?.toUpperCase() ||
+    session?.user?.email?.[0]?.toUpperCase() ||
+    'U';
 
   return (
     <div className="profile-dropdown-container">
@@ -51,12 +52,12 @@ export default function ProfileDropdown({
       {showProfileMenu && (
         <>
           {/* Backdrop */}
-          <div 
-            className="profile-backdrop" 
+          <div
+            className="profile-backdrop"
             onClick={() => setShowProfileMenu(false)}
             aria-hidden="true"
           />
-          
+
           {/* Dropdown Menu */}
           <div className="profile-dropdown-menu">
             {/* Header Section */}
@@ -67,10 +68,10 @@ export default function ProfileDropdown({
                 </div>
                 <div className="profile-header-info">
                   <div className="profile-header-name">
-                    {session.user?.name || 'User'}
+                    {session?.user?.name || 'User'}
                   </div>
                   <div className="profile-header-email">
-                    {session.user?.email}
+                    {session?.user?.email}
                   </div>
                 </div>
               </div>
@@ -109,6 +110,34 @@ export default function ProfileDropdown({
                 {remainingRequests} requests remaining
               </div>
             </div>
+
+            {!isPremium && (
+              <div className="px-4 pb-2">
+                <button
+                  onClick={async () => {
+                    if (confirm('Upgrade to Premium for $4.99? (Mock Payment)')) {
+                      try {
+                        const res = await fetch('/api/user/upgrade', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ email: session?.user?.email, plan: 'pro' })
+                        });
+                        if (res.ok) {
+                          alert('Upgraded! Refreshing...');
+                          window.location.reload();
+                        }
+                      } catch {
+                        alert('Error upgrading');
+                      }
+                    }
+                  }}
+                  className="w-full bg-gradient-to-r from-yellow-400 to-yellow-600 text-white text-xs font-bold py-2 rounded-md shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2"
+                >
+                  <Crown size={14} />
+                  Upgrade to Premium
+                </button>
+              </div>
+            )}
 
             {/* Sign Out Button */}
             <div className="profile-actions">

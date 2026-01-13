@@ -40,38 +40,38 @@
   --color-brand-dark: #424d39;
   --color-brand-light: #b1e487;
   --color-brand-hover: #5d6b52;
-  
+
   /* UI Colors */
   --color-bg: #f6f4f1;
   --color-surface: #ffffff;
   --color-border: #e5e7eb;
   --color-border-hover: #d1d5db;
-  
+
   /* Text Colors */
   --color-text-primary: #111827;
   --color-text-secondary: #6b7280;
   --color-text-tertiary: #9ca3af;
-  
+
   /* Semantic Colors */
   --color-success: #10b981;
   --color-success-bg: #ecfdf5;
   --color-success-border: #a7f3d0;
-  
+
   --color-error: #ef4444;
   --color-error-bg: #fef2f2;
   --color-error-border: #fecaca;
-  
+
   --color-warning: #f59e0b;
   --color-warning-bg: #fffbeb;
   --color-warning-border: #fde68a;
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   --shadow-brand: 0 10px 25px -5px rgba(80, 92, 70, 0.15);
-  
+
   /* Spacing */
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
@@ -80,19 +80,19 @@
   --spacing-xl: 2rem;
   --spacing-2xl: 3rem;
   --spacing-3xl: 4rem;
-  
+
   /* Border Radius */
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
   --radius-full: 9999px;
-  
+
   /* Transitions - Optimized */
   --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 180ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  
+
   /* Fonts */
   --font-sans: var(--font-roboto-flex), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: var(--font-roboto-mono), ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace;
@@ -164,7 +164,8 @@ body {
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   transition: all var(--transition-base);
   will-change: transform, background;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; /* ← ADDED THIS LINE */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* ← ADDED THIS LINE */
 }
 
 .nav-menu-center a,
@@ -429,8 +430,13 @@ body {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Danger/Success Buttons */
@@ -494,13 +500,16 @@ body {
 .history-sidebar {
   position: fixed;
   left: 0;
-  top: 0; /* ← CHANGED from 73px */
-  width: 420px;
-  height: 100vh; /* ← CHANGED from calc(100vh - 73px) */
-  padding-top: 73px; /* ← ADD THIS */
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
-  box-shadow: var(--shadow-xl);
+  top: 0;
+  width: 450px;
+  /* Slightly wider */
+  height: 100vh;
+  padding-top: 80px;
+  background: rgba(255, 255, 255, 0.95);
+  /* Glassmorphism base */
+  backdrop-filter: blur(12px);
+  border-right: 1px solid rgba(229, 231, 235, 0.5);
+  box-shadow: 20px 0 50px rgba(0, 0, 0, 0.1);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding-left: var(--spacing-xl);
@@ -582,17 +591,20 @@ body {
 
 .history-text {
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: 0.825rem;
   color: var(--color-text-primary);
-  margin-bottom: var(--spacing-sm);
-  line-height: 1.5;
+  margin-bottom: var(--spacing-md);
+  line-height: 1.6;
+  background: rgba(0, 0, 0, 0.02);
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
 }
 
 .history-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
 }
 
 .history-badge {
@@ -610,6 +622,153 @@ body {
 .history-badge.error {
   background: var(--color-error);
   color: white;
+}
+
+/* ============================================
+   UNIVERSITY LOGOS - INFINITE SEAMLESS LOOP
+   ============================================ */
+
+.logos-section {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  padding: 4rem 0;
+  background: linear-gradient(180deg,
+      rgba(80, 92, 70, 0.03) 0%,
+      rgba(80, 92, 70, 0.06) 50%,
+      rgba(80, 92, 70, 0.03) 100%);
+  overflow: hidden;
+  position: relative;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.logos-container {
+  width: 100%;
+  max-width: 100%;
+}
+
+.logos-title {
+  text-align: center;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--color-text-tertiary);
+  margin-bottom: 2.5rem;
+  font-weight: 500;
+}
+
+/* Marquee Wrapper */
+.marquee {
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Fade edges for smooth look */
+.marquee::before,
+.marquee::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 150px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Marquee Track - STATIC (no animation) */
+.marquee-track {
+  display: flex;
+  width: fit-content;
+  justify-content: center;
+  gap: 3rem;
+  min-height: 80px;
+  /* animation: scroll 25s linear infinite; - REMOVED */
+}
+
+/* Marquee Items */
+.marquee-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 2rem;
+  flex-shrink: 0;
+}
+
+/* University Logos - STATIC & NON-INTERACTIVE */
+.uni-logo {
+  height: 65px;
+  width: auto;
+  max-width: 180px;
+  object-fit: contain;
+  opacity: 0.7;
+  filter: grayscale(100%);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* No hover effect - logos stay grayscale */
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+  .logos-section {
+    padding: 3rem 0;
+  }
+
+  .logos-title {
+    font-size: 0.85rem;
+    margin-bottom: 2rem;
+  }
+
+  .marquee::before,
+  .marquee::after {
+    width: 80px;
+  }
+
+  .marquee-item {
+    padding: 0 2rem;
+  }
+
+  .uni-logo {
+    height: 45px;
+    max-width: 120px;
+  }
+
+  .marquee-track {
+    animation-duration: 20s;
+  }
+}
+
+@media (max-width: 480px) {
+  .logos-section {
+    padding: 2rem 0;
+  }
+
+  .logos-title {
+    font-size: 0.75rem;
+  }
+
+  .marquee::before,
+  .marquee::after {
+    width: 40px;
+  }
+
+  .marquee-item {
+    padding: 0 1.5rem;
+  }
+
+  .uni-logo {
+    height: 38px;
+    max-width: 100px;
+  }
+
+  .marquee-track {
+    animation-duration: 15s;
+  }
 }
 
 /* ----------------------------------------------------------------------------
@@ -642,9 +801,12 @@ body {
 }
 
 @keyframes pulse-subtle {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
   }
+
   50% {
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
   }
@@ -1096,6 +1258,7 @@ body {
   0% {
     transform: translateX(0);
   }
+
   100% {
     transform: translateX(-50%);
   }
@@ -1151,30 +1314,37 @@ section {
 
 .features-section {
   background: white;
-  padding: var(--spacing-3xl) 0 calc(var(--spacing-3xl) + var(--spacing-2xl)); /* ← Add extra bottom padding */
+  padding: var(--spacing-3xl) 0 calc(var(--spacing-3xl) + var(--spacing-2xl));
+  /* ← Add extra bottom padding */
 }
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); /* ← Change from 320px to 340px */
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  /* ← Change from 320px to 340px */
   gap: var(--spacing-xl);
 }
 
 .feature-icon {
-  width: 64px; /* ← Change from 48px */
-  height: 64px; /* ← Change from 48px */
+  width: 64px;
+  /* ← Change from 48px */
+  height: 64px;
+  /* ← Change from 48px */
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(80, 92, 70, 0.08) 0%, rgba(80, 92, 70, 0.04) 100%); /* ← Update */
-  border: 1px solid rgba(80, 92, 70, 0.1); /* ← Add border */
+  background: linear-gradient(135deg, rgba(80, 92, 70, 0.08) 0%, rgba(80, 92, 70, 0.04) 100%);
+  /* ← Update */
+  border: 1px solid rgba(80, 92, 70, 0.1);
+  /* ← Add border */
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-lg);
   color: var(--color-brand);
 }
 
 .feature-card:hover .feature-icon {
-  background: linear-gradient(135deg, rgba(80, 92, 70, 0.12) 0%, rgba(80, 92, 70, 0.06) 100%); /* ← Add hover effect */
+  background: linear-gradient(135deg, rgba(80, 92, 70, 0.12) 0%, rgba(80, 92, 70, 0.06) 100%);
+  /* ← Add hover effect */
   border-color: var(--color-brand);
 }
 
@@ -1197,19 +1367,19 @@ section {
   border-radius: var(--radius-lg);
   padding: 2px;
   background: linear-gradient(135deg, var(--color-brand), #059669);
-  
+
   /* WebKit (Chrome, Safari) */
-  -webkit-mask: 
-    linear-gradient(#fff 0 0) content-box, 
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
-  
+
   /* Standard (Firefox, Edge) */
-  mask: 
-    linear-gradient(#fff 0 0) content-box, 
+  mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   mask-composite: exclude;
-  
+
   opacity: 0;
   transition: opacity var(--transition-slow);
 }
@@ -1536,7 +1706,7 @@ section {
   transform: translateX(-50%);
   background: var(--color-brand);
   color: white;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.6875rem;
   font-weight: 600;
   padding: 0.5rem 1.25rem;
@@ -1557,7 +1727,7 @@ section {
 }
 
 .pricing-name {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   font-size: 1.5rem;
   font-weight: 500;
   color: var(--color-text-primary);
@@ -1577,7 +1747,7 @@ section {
 }
 
 .pricing-original {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   font-size: 1.75rem;
   font-weight: 500;
   color: var(--color-text-tertiary);
@@ -1593,7 +1763,7 @@ section {
 }
 
 .pricing-amount {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   font-size: 3.5rem;
   font-weight: 600;
   color: var(--color-text-primary);
@@ -1605,14 +1775,14 @@ section {
 }
 
 .pricing-period {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   font-size: 1rem;
   color: var(--color-text-secondary);
   font-weight: 400;
 }
 
 .pricing-desc {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   font-size: 0.9375rem;
   color: var(--color-text-secondary);
   margin-top: var(--spacing-xs);
@@ -1817,11 +1987,11 @@ section {
     padding: var(--spacing-md);
     min-height: 50px;
   }
-  
+
   .faq-question-text {
     font-size: 1rem;
   }
-  
+
   .faq-answer {
     padding: 0 var(--spacing-md) var(--spacing-md);
   }
@@ -1938,7 +2108,7 @@ section {
   .history-sidebar {
     width: 380px;
   }
-  
+
   .nav-menu-center {
     gap: 1.25rem;
   }
@@ -1948,12 +2118,12 @@ section {
   .container {
     padding: 0 var(--spacing-lg);
   }
-  
+
   .navbar-content {
     grid-template-columns: 1fr auto;
     padding: var(--spacing-sm) 0;
   }
-  
+
   .navbar-brand {
     justify-self: start;
   }
@@ -1961,19 +2131,19 @@ section {
   .nav-menu-center {
     display: none;
   }
-  
+
   .hamburger-btn {
     display: flex;
   }
-  
+
   .mobile-menu {
     display: flex;
   }
-  
+
   .navbar-actions {
     gap: var(--spacing-sm);
   }
-  
+
   .btn-signin,
   .btn-signup {
     padding: 0.5rem 0.875rem;
@@ -1995,7 +2165,7 @@ section {
   .hero-card {
     padding: var(--spacing-lg);
   }
-  
+
   .textarea-main {
     min-height: 140px;
   }
@@ -2022,11 +2192,11 @@ section {
     grid-template-columns: 1fr;
     gap: var(--spacing-2xl);
   }
-  
+
   .split-hero-image {
     order: 2;
   }
-  
+
   .split-hero-content {
     order: 1;
     padding: 0;
@@ -2036,11 +2206,11 @@ section {
   .features-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .pricing-popular {
     transform: scale(1);
   }
-  
+
   .pricing-popular:hover {
     transform: translateY(-8px);
   }
@@ -2062,11 +2232,11 @@ section {
   .footer {
     padding: var(--spacing-xl) 0 var(--spacing-md);
   }
-  
+
   .faq-question-btn {
     padding: var(--spacing-md);
   }
-  
+
   .faq-answer {
     padding: 0 var(--spacing-md) var(--spacing-md);
   }
@@ -2087,20 +2257,20 @@ section {
   .pricing-amount {
     font-size: 2.75rem;
   }
-  
+
   .pricing-original {
     font-size: 1.5rem;
   }
-  
+
   .pricing-main-title {
     font-size: 2rem;
   }
-  
+
   .split-hero-stats {
     grid-template-columns: 1fr;
     gap: var(--spacing-sm);
   }
-  
+
   .stat-item {
     padding: var(--spacing-sm) 0;
   }
@@ -2169,14 +2339,24 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* Hardware acceleration for specific animations */
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .btn-spinner {
@@ -2191,8 +2371,13 @@ body {
 }
 
 @keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 /* Optimize scroll performance */
@@ -2208,18 +2393,19 @@ body {
 
 /* Mobile optimizations */
 @media (max-width: 768px) {
+
   /* Faster scrolling on mobile */
   * {
     -webkit-overflow-scrolling: touch;
   }
-  
+
   /* Prevent zoom on input focus */
   input,
   select,
   textarea {
     font-size: 16px !important;
   }
-  
+
   /* Better touch targets */
   button,
   a,
@@ -2228,75 +2414,75 @@ body {
     min-height: 44px;
     min-width: 44px;
   }
-  
+
   /* Prevent horizontal scroll */
   body {
     overflow-x: hidden;
   }
-  
+
   /* Optimize hero section padding on mobile */
   .hero {
     padding: 2rem 0;
   }
-  
+
   .hero-card {
     padding: 1.5rem;
   }
-  
+
   /* Better mobile textarea */
   .textarea-main {
     min-height: 140px;
   }
-  
+
   /* Stack action buttons on mobile */
   .action-buttons {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
   }
-  
+
   /* Mobile pricing cards */
   .pricing-grid {
     grid-template-columns: 1fr;
     gap: 1.5rem;
   }
-  
+
   .pricing-popular {
     transform: scale(1) !important;
   }
-  
+
   /* Mobile features grid */
   .features-grid {
     grid-template-columns: 1fr;
     gap: 1.5rem;
   }
-  
+
   /* Mobile split hero */
   .split-hero-grid {
     grid-template-columns: 1fr;
     gap: 2rem;
   }
-  
+
   .split-hero-stats {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
-  
+
   /* Mobile FAQ */
   .faq-question-btn {
     padding: 1rem;
     font-size: 1rem;
   }
-  
+
   .faq-answer {
     padding: 0 1rem 1rem;
   }
-  
+
   /* Prevent animation jank on mobile */
   * {
     -webkit-tap-highlight-color: transparent;
   }
-  
+
   .btn-primary:active,
   .btn-secondary:active {
     transform: scale(0.98);
@@ -2305,6 +2491,7 @@ body {
 
 /* Tablet optimizations */
 @media (min-width: 769px) and (max-width: 1024px) {
+
   .pricing-grid,
   .features-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -2313,6 +2500,7 @@ body {
 
 /* Improve touch targets on mobile */
 @media (hover: none) and (pointer: coarse) {
+
   .btn-primary,
   .btn-secondary,
   .dropzone,
@@ -2329,6 +2517,7 @@ body {
 
 /* Reduced Motion Support */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -2337,7 +2526,7 @@ body {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  
+
   .marquee-track {
     animation: none;
   }
@@ -2345,11 +2534,12 @@ body {
 
 /* High Contrast Mode */
 @media (prefers-contrast: high) {
+
   .btn-primary,
   .btn-secondary {
     border-width: 2px;
   }
-  
+
   .navbar {
     border-bottom-width: 2px;
   }
@@ -2398,12 +2588,10 @@ body {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.3),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent);
   transition: left 0.5s ease;
 }
 
@@ -2608,6 +2796,7 @@ body {
     opacity: 0;
     transform: scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -2627,6 +2816,7 @@ body {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -2642,9 +2832,12 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
   }
+
   50% {
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
   }
@@ -2663,6 +2856,7 @@ body {
     opacity: 0;
     transform: translateX(-12px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -2710,13 +2904,14 @@ body {
    ---------------------------------------------------------------------------- */
 
 @media (hover: none) and (pointer: coarse) {
+
   /* Disable hover effects on mobile */
   .spotlight-card::before,
   .pricing-card::after,
   .hero-card::before {
     display: none;
   }
-  
+
   /* Simpler touch feedback */
   .btn-primary:active,
   .btn-secondary:active {
@@ -2847,7 +3042,7 @@ body {
   gap: var(--spacing-md);
 }
 
-.metadata-grid > div {
+.metadata-grid>div {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -2881,21 +3076,21 @@ body {
   .suggestion-actions {
     flex-direction: column;
   }
-  
+
   .btn-small {
     width: 100%;
     justify-content: center;
   }
-  
+
   .format-tabs {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-  
+
   .format-tab {
     flex-shrink: 0;
   }
-  
+
   .metadata-grid {
     grid-template-columns: 1fr;
   }
@@ -2980,6 +3175,7 @@ body {
     opacity: 0;
     transform: translateY(-0.5rem);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -3413,5 +3609,3 @@ body {
 /* ============================================================================
    END OF ADVANCED ANIMATIONS
    ============================================================================ */
-
-

@@ -30,7 +30,7 @@ export async function validateDOI(doi) {
       };
     }
   } catch (error) {
-    console.log('DOI validation failed:', error.message);
+    console.error('DOI validation failed:', error.message);
   }
   
   return { valid: false, metadata: null };
@@ -67,7 +67,7 @@ export async function searchOpenAlex(parsed) {
       }
     }
   } catch (error) {
-    console.log('OpenAlex search failed:', error.message);
+    console.error('OpenAlex search failed:', error.message);
   }
   
   return null;
@@ -106,7 +106,7 @@ export async function searchSemanticScholar(parsed) {
       }
     }
   } catch (error) {
-    console.log('Semantic Scholar search failed:', error.message);
+    console.error('Semantic Scholar search failed:', error.message);
   }
   
   return null;
@@ -185,7 +185,7 @@ export async function searchGoogleBooks(parsed) {
       }
     }
   } catch (error) {
-    console.log('Google Books search failed:', error.message);
+    console.error('Google Books search failed:', error.message);
   }
   
   return null;

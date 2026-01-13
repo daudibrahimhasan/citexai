@@ -11,9 +11,9 @@ export function isValidDOI(doi) {
 
 export function isValidISBN(isbn) {
   if (!isbn) return false;
-  
+
   const digits = isbn.replace(/[-\s]/g, '');
-  
+
   // ISBN-10
   if (digits.length === 10) {
     let sum = 0;
@@ -24,7 +24,7 @@ export function isValidISBN(isbn) {
     sum += checksum;
     return sum % 11 === 0;
   }
-  
+
   // ISBN-13
   if (digits.length === 13) {
     let sum = 0;
@@ -34,7 +34,7 @@ export function isValidISBN(isbn) {
     const checksum = (10 - (sum % 10)) % 10;
     return checksum === parseInt(digits[12]);
   }
-  
+
   return false;
 }
 
@@ -71,7 +71,7 @@ export async function validateURL(url) {
     clearTimeout(timeoutId);
 
     return { valid: response.ok, status: response.status };
-  } catch (error) {
+  } catch {
     return { valid: false, status: 0 };
   }
 }

@@ -36,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode 
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Primary Meta Tags */}
         <title>CiteXai - AI-Powered Citation Verification | Stop Citing Fake Papers</title>

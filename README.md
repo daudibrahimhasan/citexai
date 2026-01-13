@@ -29,9 +29,6 @@ Our engine cross-references your bibliography against a verified index of over *
 Built for students who want to succeed and researchers who demand accuracy.
 
 **A product of Nexasity Ai**
-_Built by [**@daudibrahimhasan**](https://github.com/daudibrahimhasan)
-
-## License
 
 Distributed under the MIT License. See `LICENSE` for more information.
 

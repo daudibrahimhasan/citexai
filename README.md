@@ -1,7 +1,7 @@
 # CiteXai
 
 **The AI Citation Guardian.**
-_Verify citations. Detect fake papers. Fix broken references instantly._
+_Catch fake citations before your professor does_
 
 ![CiteXai Dashboard](public/images/readme.png)
 
@@ -29,11 +29,10 @@ Our engine cross-references your bibliography against a verified index of over *
 Built for students who want to succeed and researchers who demand accuracy.
 
 **A product of Nexasity Ai**
-_Built by **DaudX** (daudibrahimhasan)_.
+_Built by [**@daudibrahimhasan**](https://github.com/daudibrahimhasan)
 
 ## License
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
-Copyright (c) 2026 **daudibrahimhasan**.
-<sub>citeXai built by @daudibrahimhasan</sub>
+Copyright (c) 2026 [**@daudibrahimhasan**](https://github.com/daudibrahimhasan)

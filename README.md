@@ -36,3 +36,4 @@ _Built by **DaudX** (daudibrahimhasan)_.
 Distributed under the MIT License. See `LICENSE` for more information.
 
 Copyright (c) 2026 **daudibrahimhasan**.
+<sub>citeXai built by @daudibrahimhasan</sub>

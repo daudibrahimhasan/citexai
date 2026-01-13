@@ -24,8 +24,6 @@ Our engine cross-references your bibliography against a verified index of over *
 - **🔄 Universal Format Converter**
   Convert citations between APA, MLA, Chicago, Harvard, and IEEE styles with one click.
 
-![CiteXai Pricing and Features](public/images/readme/features.png)
-
 ## About
 
 Built for students who want to succeed and researchers who demand accuracy.
